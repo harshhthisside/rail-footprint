@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Rail Footprint</title>
+
+    <!-- Leaflet -->
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- Google Font -->
+
+    <link
+        rel="preconnect"
+        href="https://fonts.googleapis.com">
+
+    <link
+        rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Main CSS -->
+
+    <link
+        rel="stylesheet"
+        href="assets/css/style.css">
+
+</head>
+
+<body>
+
+<div id="app">
+
+    <!-- ================= Sidebar ================= -->
+
+    <aside id="sidebar">
+
+        <div class="logo">
+
+            <h1>🚆 Rail Footprint</h1>
+
+            <p>
+                Visualize every railway journey across India.
+            </p>
+
+        </div>
+
+        <!-- ===================================== -->
+        <!-- Authentication -->
+        <!-- ===================================== -->
+
+        <div id="authContainer">
+
+            <button id="loginBtn">
+
+                Sign in with Google
+
+            </button>
+
+            <button
+                id="logoutBtn"
+                style="display:none;">
+
+                Logout
+
+            </button>
+
+            <div id="userName"></div>
+
+        </div>
+
+        <!-- ===================================== -->
+        <!-- Statistics -->
+        <!-- ===================================== -->
+
+        <section id="statistics">
+
+            <div class="stat-card">
+
+                <span class="stat-label">
+                    🚆 Journeys
+                </span>
+
+                <span
+                    id="statJourneys"
+                    class="stat-value">
+
+                    0
+
+                </span>
+
+            </div>
+
+            <div class="stat-card">
+
+                <span class="stat-label">
+                    📍 Stations
+                </span>
+
+                <span
+                    id="statStations"
+                    class="stat-value">
+
+                    0
+
+                </span>
+
+            </div>
+
+            <div class="stat-card">
+
+                <span class="stat-label">
+                    🛤 Distance
+                </span>
+
+                <span
+                    id="statDistance"
+                    class="stat-value">
+
+                    0 km
+
+                </span>
+
+            </div>
+
+            <div class="stat-card">
+
+                <span class="stat-label">
+                    🏆 Longest
+                </span>
+
+                <span
+                    id="statLongest"
+                    class="stat-value">
+
+                    -
+
+                </span>
+
+            </div>
+
+        </section>
+
+        <!-- ===================================== -->
+        <!-- Journey Form -->
+        <!-- ===================================== -->
+
+        <div class="form">
+
+            <label>Origin Station</label>
+
+            <input
+                id="originInput"
+                type="text"
+                placeholder="Search station">
+
+            <div
+                id="originSuggestions"
+                class="suggestions"></div>
+
+            <button id="addIntermediateBtn">
+
+                + Add Intermediate Station
+
+            </button>
+
+            <div
+                id="intermediateContainer"
+                class="intermediate-container">
+            </div>
+
+            <label>Destination Station</label>
+
+            <input
+                id="destinationInput"
+                type="text"
+                placeholder="Search station">
+
+            <div
+                id="destinationSuggestions"
+                class="suggestions"></div>
+
+            <button id="addJourneyBtn">
+
+                🚆 Add Journey
+
+            </button>
+
+        </div>
+
+        <hr>
+
+        <section id="journeys">
+
+            <h2>My Journeys</h2>
+
+            <div
+                id="journeyList"
+                class="journey-list">
+
+            </div>
+
+        </section>
+
+    </aside>
+
+    <!-- ================= Map ================= -->
+
+    <main id="mapContainer">
+
+        <div id="map"></div>
+
+    </main>
+
+</div>
+
+<!-- Leaflet -->
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Application -->
+
+<script
+    type="module"
+    src="assets/js/app.js">
+</script>
+
+</body>
+
+</html>
