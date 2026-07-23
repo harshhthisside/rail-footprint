@@ -1,0 +1,312 @@
+/* =========================================================
+   JOURNEY SECTION
+========================================================= */
+
+#journeys{
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:18px;
+
+}
+
+/* =========================================================
+   JOURNEY CARD
+========================================================= */
+
+.journey-card{
+
+    background:var(--card);
+
+    border:1px solid var(--border);
+
+    border-radius:22px;
+
+    padding:20px;
+
+    overflow:hidden;
+
+    box-shadow:var(--shadow-sm);
+
+    transition:all .3s ease;
+
+}
+
+.journey-card:hover{
+
+    transform:translateY(-4px);
+
+    box-shadow:var(--shadow);
+
+    border-color:rgba(37,99,235,.18);
+
+}
+
+.journey-card h3{
+
+    margin:0 0 18px;
+
+    font-size:19px;
+
+    font-weight:700;
+
+    color:var(--text);
+
+}
+
+/* =========================================================
+   TIMELINE
+========================================================= */
+
+.timeline{
+
+    position:relative;
+
+    padding-left:28px;
+
+    margin-left:6px;
+
+}
+
+.timeline::before{
+
+    content:"";
+
+    position:absolute;
+
+    left:9px;
+
+    top:4px;
+
+    bottom:4px;
+
+    width:2px;
+
+    background:linear-gradient(
+
+        to bottom,
+
+        var(--primary),
+
+        rgba(37,99,235,.15)
+
+    );
+
+}
+
+.timeline-item{
+
+    position:relative;
+
+    margin-bottom:22px;
+
+}
+
+.timeline-item:last-child{
+
+    margin-bottom:0;
+
+}
+
+.timeline-item::before{
+
+    content:"";
+
+    position:absolute;
+
+    left:-24px;
+
+    top:6px;
+
+    width:14px;
+
+    height:14px;
+
+    border-radius:50%;
+
+    background:var(--primary);
+
+    border:4px solid var(--card);
+
+    box-shadow:0 0 0 4px rgba(37,99,235,.15);
+
+}
+
+/* =========================================================
+   STATIONS
+========================================================= */
+
+.station-name{
+
+    font-size:17px;
+
+    font-weight:700;
+
+    color:var(--text);
+
+}
+
+.station-code{
+
+    margin-top:4px;
+
+    font-size:13px;
+
+    color:var(--text-secondary);
+
+}
+
+.station-time{
+
+    margin-top:6px;
+
+    font-size:12px;
+
+    color:var(--text-secondary);
+
+}
+
+/* =========================================================
+   JOURNEY INFO
+========================================================= */
+
+.journey-meta{
+
+    display:flex;
+
+    flex-wrap:wrap;
+
+    gap:10px;
+
+    margin-top:18px;
+
+}
+
+.journey-meta span{
+
+    padding:8px 12px;
+
+    border-radius:999px;
+
+    background:rgba(37,99,235,.08);
+
+    color:var(--primary);
+
+    font-size:12px;
+
+    font-weight:600;
+
+}
+
+/* =========================================================
+   ACTION BUTTONS
+========================================================= */
+
+.journey-actions{
+
+    display:flex;
+
+    gap:12px;
+
+    margin-top:20px;
+
+}
+
+.editJourney,
+.deleteJourney{
+
+    flex:1;
+
+    padding:13px;
+
+    border:none;
+
+    border-radius:14px;
+
+    font-size:14px;
+
+    font-weight:700;
+
+    cursor:pointer;
+
+    transition:all .25s ease;
+
+}
+
+.editJourney{
+
+    background:rgba(37,99,235,.10);
+
+    color:var(--primary);
+
+}
+
+.editJourney:hover{
+
+    background:var(--primary);
+
+    color:#fff;
+
+}
+
+.deleteJourney{
+
+    background:rgba(239,68,68,.10);
+
+    color:#ef4444;
+
+}
+
+.deleteJourney:hover{
+
+    background:#ef4444;
+
+    color:#fff;
+
+}
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
+
+#journeyList:empty::before{
+
+    content:"No journeys added yet.";
+
+    display:block;
+
+    padding:28px;
+
+    text-align:center;
+
+    border:2px dashed var(--border);
+
+    border-radius:18px;
+
+    color:var(--text-secondary);
+
+    background:var(--card);
+
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media(max-width:768px){
+
+    .journey-card{
+
+        padding:18px;
+
+    }
+
+    .journey-actions{
+
+        flex-direction:column;
+
+    }
+
+}

@@ -3,9 +3,18 @@
 // Main Application
 // ==========================================
 
-import { initializeMap } from "./map.js";
-import { initializeStationSearch } from "./stations.js";
-import { loadGraph } from "./routing.js";
+import {
+    initializeMap,
+    refreshMap
+} from "./map.js";
+
+import {
+    initializeStationSearch
+} from "./stations.js";
+
+import {
+    loadGraph
+} from "./routing.js";
 
 import {
     initializeJourneyManager,
@@ -23,7 +32,9 @@ import {
     logout
 } from "./auth.js";
 
-import { loadStatistics } from "./statistics.js";
+import {
+    loadStatistics
+} from "./statistics.js";
 
 async function initializeApp() {
 
@@ -33,66 +44,185 @@ async function initializeApp() {
 
     try {
 
-        // ------------------------------------------
-        // Login / Logout Buttons
-        // ------------------------------------------
+        // ==========================================
+        // DOM References
+        // ==========================================
 
-        document
-            .getElementById("loginBtn")
-            ?.addEventListener("click", login);
+        const menuToggle =
+            document.getElementById("menuToggle");
 
-        document
-            .getElementById("logoutBtn")
-            ?.addEventListener("click", logout);
+        const sidebar =
+            document.getElementById("sidebar");
 
-        // ------------------------------------------
-        // Map
-        // ------------------------------------------
+        const overlay =
+            document.getElementById("sidebarOverlay");
+
+        const loginBtn =
+            document.getElementById("loginBtn");
+
+        const logoutBtn =
+            document.getElementById("logoutBtn");
+
+        const addIntermediateBtn =
+            document.getElementById("addIntermediateBtn");
+
+        const addJourneyBtn =
+            document.getElementById("addJourneyBtn");
+
+        const themeBtn =
+            document.getElementById("themeBtn");
+
+        // ==========================================
+        // Login / Logout
+        // ==========================================
+
+        loginBtn?.addEventListener(
+            "click",
+            login
+        );
+
+        logoutBtn?.addEventListener(
+            "click",
+            logout
+        );
+
+        // ==========================================
+        // Theme
+        // ==========================================
+
+        const savedTheme =
+            localStorage.getItem("theme");
+
+        if (savedTheme === "dark") {
+
+            document.body.classList.add("dark");
+
+            if (themeBtn) {
+
+                themeBtn.textContent = "☀️";
+
+            }
+
+        }
+
+        themeBtn?.addEventListener("click", () => {
+
+            document.body.classList.toggle("dark");
+
+            const dark =
+                document.body.classList.contains("dark");
+
+            localStorage.setItem(
+                "theme",
+                dark ? "dark" : "light"
+            );
+
+            themeBtn.textContent =
+                dark ? "☀️" : "🌙";
+
+        });
+
+        // ==========================================
+        // Initialize Map
+        // ==========================================
 
         initializeMap();
 
-        // ------------------------------------------
-        // Railway Graph
-        // ------------------------------------------
+        // ==========================================
+        // Routing Graph
+        // ==========================================
 
         await loadGraph();
 
-        // ------------------------------------------
-        // Station Index
-        // ------------------------------------------
+        // ==========================================
+        // Station Search
+        // ==========================================
 
         await initializeStationSearch();
 
-        // ------------------------------------------
+        // ==========================================
         // Intermediate Stations
-        // ------------------------------------------
+        // ==========================================
 
         initializeIntermediateEvents();
 
-        document
-            .getElementById("addIntermediateBtn")
-            .addEventListener(
-                "click",
-                addIntermediateStation
-            );
+        addIntermediateBtn?.addEventListener(
+            "click",
+            addIntermediateStation
+        );
 
-        // ------------------------------------------
+        // ==========================================
         // Journey Manager
-        // ------------------------------------------
+        // ==========================================
 
         initializeJourneyManager();
 
-        // ------------------------------------------
+        // ==========================================
+        // Sidebar Helpers
+        // ==========================================
+
+        function openSidebar() {
+
+            if (!sidebar) return;
+
+            sidebar.classList.add("open");
+
+            overlay?.classList.add("show");
+
+            refreshMap();
+
+        }
+
+        function closeSidebar() {
+
+            if (!sidebar) return;
+
+            sidebar.classList.remove("open");
+
+            overlay?.classList.remove("show");
+
+            refreshMap();
+
+        }
+
+        // ==========================================
+        // Mobile Menu
+        // ==========================================
+
+        menuToggle?.addEventListener("click", () => {
+
+            if (sidebar?.classList.contains("open")) {
+
+                closeSidebar();
+
+            }
+            else {
+
+                openSidebar();
+
+            }
+
+        });
+
+        overlay?.addEventListener(
+            "click",
+            closeSidebar
+        );
+
+        document.addEventListener("keydown", (e) => {
+
+            if (e.key === "Escape") {
+
+                closeSidebar();
+
+            }
+
+        });
+
+        // ==========================================
         // Authentication
-        // ------------------------------------------
-
-        initializeAuth(async (user) => {
-
-            const loginBtn =
-                document.getElementById("loginBtn");
-
-            const logoutBtn =
-                document.getElementById("logoutBtn");
+        // ==========================================
+                initializeAuth(async (user) => {
 
             const userName =
                 document.getElementById("userName");
@@ -104,10 +234,7 @@ async function initializeApp() {
 
             if (user) {
 
-                console.log(
-                    "Logged in:",
-                    user.displayName
-                );
+                console.log("Logged in:", user.displayName);
 
                 loginBtn.style.display = "none";
                 logoutBtn.style.display = "inline-block";
@@ -127,12 +254,17 @@ async function initializeApp() {
                 loginBtn.style.display = "inline-block";
                 logoutBtn.style.display = "none";
 
-                userName.textContent = "";
+                userName.textContent = "Guest";
 
-                document.getElementById(
-                    "journeyList"
-                ).innerHTML =
-                    "<p>Please sign in.</p>";
+                const journeyList =
+                    document.getElementById("journeyList");
+
+                if (journeyList) {
+
+                    journeyList.innerHTML =
+                        "<p>Please sign in to view your journeys.</p>";
+
+                }
 
                 document.getElementById("statJourneys").textContent = "0";
                 document.getElementById("statStations").textContent = "0";
@@ -142,6 +274,44 @@ async function initializeApp() {
             }
 
         });
+
+        // ==========================================
+        // Auto Close Sidebar
+        // ==========================================
+
+        addJourneyBtn?.addEventListener("click", () => {
+
+            if (window.innerWidth <= 768) {
+
+                setTimeout(() => {
+
+                    closeSidebar();
+
+                }, 350);
+
+            }
+
+        });
+
+        // ==========================================
+        // Window Resize
+        // ==========================================
+
+        window.addEventListener("resize", () => {
+
+            refreshMap();
+
+            if (window.innerWidth > 768) {
+
+                closeSidebar();
+
+            }
+
+        });
+
+        // ==========================================
+        // Application Ready
+        // ==========================================
 
         console.log("=================================");
         console.log("Application Ready");

@@ -1,0 +1,208 @@
+/* ==========================================
+   GLASS CARD
+========================================== */
+
+.glass-card{
+
+    background:var(--card);
+
+    border:1px solid var(--border);
+
+    border-radius:22px;
+
+    box-shadow:var(--shadow-sm);
+
+    transition:.3s ease;
+
+}
+
+.glass-card:hover{
+
+    box-shadow:var(--shadow);
+
+}
+
+/* ==========================================
+   JOURNEY CARD
+========================================== */
+
+.journey-card{
+
+    background:var(--card);
+
+    border:1px solid var(--border);
+
+    border-radius:20px;
+
+    padding:18px;
+
+    box-shadow:var(--shadow-sm);
+
+    transition:.3s;
+
+}
+
+.journey-card:hover{
+
+    transform:translateY(-4px);
+
+    box-shadow:var(--shadow);
+
+}
+
+.journey-card h3{
+
+    margin:0 0 16px;
+
+    font-size:18px;
+
+    font-weight:700;
+
+    color:var(--text);
+
+}
+
+/* ==========================================
+   TIMELINE
+========================================== */
+
+.timeline{
+
+    position:relative;
+
+    margin-left:18px;
+
+    padding-left:24px;
+
+}
+
+.timeline::before{
+
+    content:"";
+
+    position:absolute;
+
+    left:7px;
+
+    top:0;
+
+    bottom:0;
+
+    width:2px;
+
+    background:var(--border);
+
+}
+
+.timeline-item{
+
+    position:relative;
+
+    margin-bottom:20px;
+
+}
+
+.timeline-item:last-child{
+
+    margin-bottom:0;
+
+}
+
+.timeline-item::before{
+
+    content:"";
+
+    position:absolute;
+
+    left:-23px;
+
+    top:7px;
+
+    width:12px;
+
+    height:12px;
+
+    border-radius:50%;
+
+    background:var(--primary);
+
+    border:3px solid var(--card);
+
+    box-shadow:0 0 0 3px rgba(37,99,235,.18);
+
+}
+
+.station-name{
+
+    font-size:17px;
+
+    font-weight:700;
+
+    color:var(--text);
+
+}
+
+.station-code{
+
+    margin-top:4px;
+
+    font-size:14px;
+
+    color:var(--text-secondary);
+
+}
+
+/* ==========================================
+   ACTION BUTTONS
+========================================== */
+
+.editJourney,
+.deleteJourney{
+
+    width:100%;
+
+    margin-top:14px;
+
+    padding:14px;
+
+    border:none;
+
+    border-radius:14px;
+
+    font-size:14px;
+
+    font-weight:700;
+
+    cursor:pointer;
+
+    transition:.25s;
+
+}
+
+.editJourney{
+
+    background:rgba(37,99,235,.10);
+
+    color:var(--primary);
+
+}
+
+.editJourney:hover{
+
+    background:rgba(37,99,235,.18);
+
+}
+
+.deleteJourney{
+
+    background:rgba(239,68,68,.10);
+
+    color:#ef4444;
+
+}
+
+.deleteJourney:hover{
+
+    background:rgba(239,68,68,.18);
+
+}

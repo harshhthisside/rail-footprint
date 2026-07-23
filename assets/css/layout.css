@@ -1,0 +1,294 @@
+/* ==========================================
+   RAIL FOOTPRINT
+   LAYOUT
+========================================== */
+
+html,
+body{
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    font-family:"Inter",sans-serif;
+
+    background:var(--background);
+
+    color:var(--text);
+
+    transition:.3s;
+}
+
+/* ==========================================
+   APP
+========================================== */
+
+#app{
+
+    display:flex;
+
+    width:100%;
+
+    height:100vh;
+
+    overflow:hidden;
+
+    position:relative;
+
+}
+
+/* ==========================================
+   SIDEBAR
+========================================== */
+
+#sidebar{
+
+    width:390px;
+    min-width:390px;
+    max-width:390px;
+
+    height:calc(100vh - 24px);
+
+    margin:12px;
+
+    display:flex;
+    flex-direction:column;
+
+    overflow-y:auto;
+
+    background:var(--sidebar-bg);
+
+    border:1px solid var(--border);
+
+    border-radius:28px;
+
+    box-shadow:
+        0 12px 40px rgba(15,23,42,.15);
+
+    transition:
+        background .35s,
+        border-color .35s,
+        transform .35s,
+        box-shadow .35s;
+
+    z-index:20;
+
+    scrollbar-width:none;
+
+}
+
+#sidebar::-webkit-scrollbar{
+
+    display:none;
+
+}
+
+/* ==========================================
+   MAP
+========================================== */
+
+#mapContainer{
+
+    flex:1;
+
+    position:relative;
+
+    overflow:hidden;
+
+    border-radius:28px;
+
+    margin:
+        12px
+        12px
+        12px
+        0;
+
+}
+
+#map{
+
+    width:100%;
+
+    height:100%;
+
+    border-radius:28px;
+
+}
+
+/* ==========================================
+   LOADING
+========================================== */
+
+#mapLoading{
+
+    position:absolute;
+
+    inset:0;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    flex-direction:column;
+
+    gap:18px;
+
+    background:var(--background);
+
+    z-index:999;
+
+    transition:
+        opacity .35s,
+        visibility .35s;
+
+}
+
+#mapLoading.hidden{
+
+    opacity:0;
+
+    visibility:hidden;
+
+}
+
+/* ==========================================
+   LOADER TEXT
+========================================== */
+
+.loading-text{
+
+    font-size:15px;
+
+    font-weight:600;
+
+    color:var(--text-secondary);
+
+}
+
+/* ==========================================
+   DESKTOP SPACING
+========================================== */
+
+.section-title{
+
+    margin:
+
+        28px
+        24px
+        16px;
+
+}
+
+/* ==========================================
+   SMOOTH TRANSITIONS
+========================================== */
+
+#sidebar,
+#mapContainer,
+#map{
+
+    transition:.35s;
+
+}
+
+/* ==========================================
+   LARGE SCREENS
+========================================== */
+
+@media (min-width:1600px){
+
+    #sidebar{
+
+        width:420px;
+
+        min-width:420px;
+
+        max-width:420px;
+
+    }
+
+}
+
+/* ==========================================
+   LAPTOP
+========================================== */
+
+@media (max-width:1200px){
+
+    #sidebar{
+
+        width:360px;
+
+        min-width:360px;
+
+        max-width:360px;
+
+    }
+
+}
+
+/* ==========================================
+   TABLET & MOBILE
+========================================== */
+
+@media (max-width:768px){
+
+    #sidebar{
+
+        position:fixed;
+
+        left:0;
+        top:0;
+
+        margin:0;
+
+        width:340px;
+        max-width:88%;
+
+        height:100vh;
+
+        border-radius:0 28px 28px 0;
+
+        transform:translateX(-110%);
+
+        z-index:1001;
+
+    }
+
+    #sidebar.open{
+
+        transform:translateX(0);
+
+    }
+
+    #mapContainer{
+
+        margin:0;
+
+        border-radius:0;
+
+    }
+
+    #map{
+
+        border-radius:0;
+
+    }
+
+}
+
+/* ==========================================
+   EXTRA SMALL DEVICES
+========================================== */
+
+@media (max-width:480px){
+
+    #sidebar{
+
+        width:320px;
+
+    }
+
+}

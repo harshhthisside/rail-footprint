@@ -1,254 +1,922 @@
 // ==========================================
 // Rail Footprint
-// Map Module
+// Premium Railway Atlas Map Module
+// Glass Route + Unified Station Dots
 // ==========================================
+
 
 let map;
 let railwayLayer;
-
 let stationMarker = null;
 
-// Stores ALL journey polylines
+
+// Journey layers
 const journeyLayers = new Map();
 
-// ------------------------------------------
+
+// Station endpoint markers
+const stationDots = new Map();
+
+
+
+
+// ==========================================
+// Route Colors
+// ==========================================
+
+const ROUTE_COLORS = [
+
+    "#0f766e",
+    "#2563eb",
+    "#dc2626",
+    "#7c3aed",
+    "#ea580c",
+    "#0891b2",
+    "#16a34a",
+    "#be185d"
+
+];
+
+
+
+
+// ==========================================
 // India Bounds
-// ------------------------------------------
+// ==========================================
 
 const INDIA_BOUNDS = L.latLngBounds(
-    [6.0, 67.0],     // South-West
-    [37.5, 98.0]     // North-East
+
+    [6.0,67.0],
+    [37.5,98.0]
+
 );
 
-// ------------------------------------------
-// Initialize
-// ------------------------------------------
 
-export function initializeMap() {
 
-    map = L.map("map", {
-        zoomControl: false,
-        preferCanvas: true,
 
-        // Lock map to India
-        maxBounds: INDIA_BOUNDS,
-        maxBoundsViscosity: 1.0,
 
-        minZoom: 5,
-        maxZoom: 18
+// ==========================================
+// Initialize Map
+// ==========================================
+
+export function initializeMap(){
+
+
+    map = L.map("map",{
+
+        zoomControl:false,
+
+        preferCanvas:true,
+
+        zoomSnap:0.25,
+
+        minZoom:5,
+
+        maxZoom:18,
+
+        maxBounds:INDIA_BOUNDS,
+
+        maxBoundsViscosity:1
+
     });
 
-    // Fit India in view
-    map.fitBounds(INDIA_BOUNDS);
 
-    L.control.zoom({
-        position: "topright"
-    }).addTo(map);
 
-    L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-        {
-            attribution:
-                "&copy; OpenStreetMap contributors &copy; CARTO",
-            maxZoom: 19
-        }
-    ).addTo(map);
+    map.setView(
 
-    console.log("✅ Map initialized");
+        [22.8,79.5],
 
-}
+        5.7
 
-// ------------------------------------------
-// Railway Layer
-// ------------------------------------------
-
-export async function loadRailwayNetwork() {
-
-    const response = await fetch(
-        "assets/data/railway_lines.geojson"
     );
 
-    const geojson = await response.json();
 
-    railwayLayer = L.geoJSON(geojson, {
 
-        style: {
+    L.control.zoom({
 
-            color: "#555",
-
-            weight: 1,
-
-            opacity: 0.5
-
-        }
+        position:"topright"
 
     }).addTo(map);
 
+
+
+
+    L.tileLayer(
+
+        "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+
+        {
+
+            maxZoom:20,
+
+            attribution:
+            "&copy; OpenStreetMap contributors &copy; CARTO"
+
+        }
+
+    )
+
+    .on("load",()=>{
+
+
+        document
+        .getElementById("mapLoading")
+        ?.classList.add("hidden");
+
+
+    })
+
+    .addTo(map);
+
+
+
+    console.log(
+        "🚆 Rail Footprint Map Initialized"
+    );
+
+
 }
 
-// ------------------------------------------
 
-export function getMap() {
+
+
+
+// ==========================================
+// Refresh Map
+// ==========================================
+
+export function refreshMap(){
+
+
+    if(!map)
+        return;
+
+
+    setTimeout(()=>{
+
+        map.invalidateSize(true);
+
+    },300);
+
+
+}
+
+
+
+
+
+// ==========================================
+// Railway Network
+// ==========================================
+
+export async function loadRailwayNetwork(){
+
+
+    try{
+
+
+        const response =
+        await fetch(
+
+            "assets/data/railway_lines.geojson"
+
+        );
+
+
+        const geojson =
+        await response.json();
+
+
+
+        railwayLayer =
+        L.geoJSON(
+
+            geojson,
+
+            {
+
+                style:{
+
+
+                    color:"#64748b",
+
+                    weight:1,
+
+                    opacity:0.28
+
+
+                }
+
+            }
+
+        ).addTo(map);
+
+
+
+        console.log(
+            "🚉 Railway Network Loaded"
+        );
+
+
+    }
+
+    catch(error){
+
+
+        console.error(
+            "Railway loading failed",
+            error
+        );
+
+
+    }
+
+
+}
+
+
+
+
+
+// ==========================================
+// Get Map
+// ==========================================
+
+export function getMap(){
 
     return map;
 
 }
 
-// ------------------------------------------
 
-export function zoomToStation(lat, lon) {
 
-    map.flyTo([lat, lon], 11);
+
+
+// ==========================================
+// Zoom Station
+// ==========================================
+
+export function zoomToStation(lat,lon){
+
+
+    map.flyTo(
+
+        [lat,lon],
+
+        11,
+
+        {
+
+            duration:1.2
+
+        }
+
+    );
+
 
 }
 
-// ------------------------------------------
 
-export function showStation(lat, lon, title = "") {
 
-    if (stationMarker)
-        map.removeLayer(stationMarker);
 
-    stationMarker = L.marker([lat, lon])
-        .addTo(map)
-        .bindPopup(title)
-        .openPopup();
 
-}
 
 // ==========================================
-// Draw ONE Journey
+// Single Station Marker
 // ==========================================
 
-export function drawJourney(id, coordinates) {
+export function showStation(
 
-    if (!coordinates || coordinates.length === 0)
-        return;
+    lat,
+    lon,
+    title=""
 
-    if (journeyLayers.has(id)) {
+){
+
+
+    if(stationMarker){
 
         map.removeLayer(
-            journeyLayers.get(id)
+            stationMarker
         );
 
     }
 
-    const polyline = L.polyline(coordinates, {
 
-        color: "#2563eb",
 
-        weight: 5,
+    stationMarker =
+    L.circleMarker(
 
-        opacity: 0.9,
+        [lat,lon],
 
-        lineJoin: "round",
+        {
 
-        lineCap: "round"
+            radius:7,
 
-    });
+            color:"#2563eb",
 
-    polyline.addTo(map);
+            weight:2,
 
-    journeyLayers.set(id, polyline);
+            fillColor:"#ffffff",
 
-}
+            fillOpacity:0.95
 
-// ==========================================
-// Draw ALL Journeys
-// ==========================================
+        }
 
-export function drawAllJourneys(journeys) {
+    )
 
-    journeyLayers.forEach(layer => {
+    .addTo(map)
 
-        map.removeLayer(layer);
+    .bindPopup(title)
 
-    });
+    .openPopup();
 
-    journeyLayers.clear();
-
-    const bounds = [];
-
-    journeys.forEach(journey => {
-
-        if (!journey.route)
-            return;
-
-        const polyline = L.polyline(journey.route, {
-
-            color: "#2563eb",
-
-            weight: 5,
-
-            opacity: 0.9,
-
-            lineJoin: "round",
-
-            lineCap: "round"
-
-        });
-
-        polyline.addTo(map);
-
-        journeyLayers.set(journey.id, polyline);
-
-        bounds.push(...journey.route);
-
-    });
-
-    if (bounds.length) {
-
-        map.fitBounds(bounds, {
-
-            padding: [40, 40],
-            maxZoom: 8
-
-        });
-
-    }
-    else {
-
-        map.fitBounds(INDIA_BOUNDS);
-
-    }
 
 }
 
+
+
+
+
+
 // ==========================================
-// Highlight One Journey
+// Journey Station Dots
+// Unified Glass Station Style
 // ==========================================
 
-export function focusJourney(id) {
+function addJourneyStations(
 
-    const layer = journeyLayers.get(id);
+    id,
 
-    if (!layer)
+    route,
+
+    originName="Origin",
+
+    destinationName="Destination"
+
+){
+
+
+    if(!route || route.length < 2)
+
         return;
 
-    map.fitBounds(layer.getBounds(), {
 
-        padding: [40, 40],
-        maxZoom: 8
 
-    });
 
-}
+    const origin =
+    route[0];
 
-// ==========================================
-// Delete One Journey
-// ==========================================
 
-export function removeJourneyFromMap(id) {
+    const destination =
+    route[route.length-1];
 
-    if (!journeyLayers.has(id))
-        return;
 
-    map.removeLayer(
 
-        journeyLayers.get(id)
+
+
+    const markerStyle = {
+
+
+        radius:7,
+
+        color:"#2563eb",
+
+        weight:2,
+
+        fillColor:"#ffffff",
+
+        fillOpacity:0.95
+
+
+    };
+
+
+
+
+
+    const originMarker =
+    L.circleMarker(
+
+        origin,
+
+        markerStyle
+
+    )
+
+    .bindPopup(
+
+        `<b>${originName}</b>`
+
+    )
+
+    .addTo(map);
+
+
+
+
+
+    const destinationMarker =
+    L.circleMarker(
+
+        destination,
+
+        markerStyle
+
+    )
+
+    .bindPopup(
+
+        `<b>${destinationName}</b>`
+
+    )
+
+    .addTo(map);
+
+
+
+
+
+    stationDots.set(
+
+        id,
+
+        {
+
+            origin:originMarker,
+
+            destination:destinationMarker
+
+        }
 
     );
 
+
+}
+
+
+
+
+
+
+
+// ==========================================
+// Draw Journey
+// ==========================================
+
+export function drawJourney(
+
+    id,
+
+    coordinates,
+
+    originName="Origin",
+
+    destinationName="Destination"
+
+){
+
+
+
+    if(!coordinates?.length)
+
+        return;
+
+
+
+
+    if(journeyLayers.has(id)){
+
+        removeJourneyFromMap(id);
+
+    }
+
+
+
+
+
+    const color =
+
+    ROUTE_COLORS[
+
+        journeyLayers.size %
+
+        ROUTE_COLORS.length
+
+    ];
+
+
+
+
+
+    const glow =
+
+    L.polyline(
+
+        coordinates,
+
+        {
+
+            color,
+
+            weight:8,
+
+            opacity:0.12,
+
+            lineCap:"round",
+
+            lineJoin:"round"
+
+        }
+
+    )
+
+    .addTo(map);
+
+
+
+
+
+    const main =
+
+    L.polyline(
+
+        coordinates,
+
+        {
+
+            color,
+
+            weight:4,
+
+            opacity:0.88,
+
+            lineCap:"round",
+
+            lineJoin:"round"
+
+        }
+
+    )
+
+    .addTo(map);
+
+
+
+
+
+    journeyLayers.set(
+
+        id,
+
+        {
+
+            main,
+
+            glow
+
+        }
+
+    );
+
+
+
+
+
+    addJourneyStations(
+
+        id,
+
+        coordinates,
+
+        originName,
+
+        destinationName
+
+    );
+
+
+}
+
+
+
+
+
+
+// ==========================================
+// Draw All Journeys
+// ==========================================
+
+export function drawAllJourneys(journeys){
+
+
+
+    journeyLayers.forEach(layer=>{
+
+
+        map.removeLayer(layer.main);
+
+        map.removeLayer(layer.glow);
+
+
+    });
+
+
+
+    stationDots.forEach(dot=>{
+
+
+        map.removeLayer(dot.origin);
+
+        map.removeLayer(dot.destination);
+
+
+    });
+
+
+
+    journeyLayers.clear();
+
+    stationDots.clear();
+
+
+
+
+    const bounds=[];
+
+
+
+
+    journeys.forEach(
+
+        (journey,index)=>{
+
+
+            if(!journey.route?.length)
+
+                return;
+
+
+
+
+            const color =
+
+            ROUTE_COLORS[
+
+                index %
+
+                ROUTE_COLORS.length
+
+            ];
+
+
+
+
+            const glow =
+
+            L.polyline(
+
+                journey.route,
+
+                {
+
+                    color,
+
+                    weight:8,
+
+                    opacity:0.12,
+
+                    lineCap:"round",
+
+                    lineJoin:"round"
+
+                }
+
+            )
+
+            .addTo(map);
+
+
+
+
+
+            const main =
+
+            L.polyline(
+
+                journey.route,
+
+                {
+
+                    color,
+
+                    weight:4,
+
+                    opacity:0.88,
+
+                    lineCap:"round",
+
+                    lineJoin:"round"
+
+                }
+
+            )
+
+            .addTo(map);
+
+
+
+
+
+            journeyLayers.set(
+
+                journey.id,
+
+                {
+
+                    main,
+
+                    glow
+
+                }
+
+            );
+
+
+
+
+
+            addJourneyStations(
+
+                journey.id,
+
+                journey.route,
+
+                journey.from || "Origin",
+
+                journey.to || "Destination"
+
+            );
+
+
+
+
+
+            bounds.push(
+
+                ...journey.route
+
+            );
+
+
+        }
+
+    );
+
+
+
+
+
+
+    if(bounds.length){
+
+
+        map.fitBounds(
+
+            bounds,
+
+            {
+
+                padding:[80,80],
+
+                maxZoom:7,
+
+                animate:true
+
+            }
+
+        );
+
+
+    }
+
+    else{
+
+
+        map.setView(
+
+            [22.8,79.5],
+
+            5.7
+
+        );
+
+
+    }
+
+
+}
+
+
+
+
+
+
+// ==========================================
+// Focus Journey
+// ==========================================
+
+export function focusJourney(id){
+
+
+
+    const layer =
+    journeyLayers.get(id);
+
+
+
+    if(!layer)
+
+        return;
+
+
+
+    map.fitBounds(
+
+        layer.main.getBounds(),
+
+        {
+
+            padding:[80,80],
+
+            maxZoom:8,
+
+            animate:true
+
+        }
+
+    );
+
+
+}
+
+
+
+
+
+
+// ==========================================
+// Remove Journey
+// ==========================================
+
+export function removeJourneyFromMap(id){
+
+
+
+    const layer =
+    journeyLayers.get(id);
+
+
+
+    if(layer){
+
+
+        map.removeLayer(layer.main);
+
+        map.removeLayer(layer.glow);
+
+
+    }
+
+
+
+
+    const dots =
+    stationDots.get(id);
+
+
+
+    if(dots){
+
+
+        map.removeLayer(
+            dots.origin
+        );
+
+
+        map.removeLayer(
+            dots.destination
+        );
+
+
+        stationDots.delete(id);
+
+
+    }
+
+
+
     journeyLayers.delete(id);
+
 
 }
