@@ -30,6 +30,9 @@ export async function initializeStationSearch() {
 
     stations = await response.json();
 
+    // Debug
+    window.stations = stations;
+
     console.log(`✅ Stations Loaded (${stations.length})`);
 
     originInput = document.getElementById("originInput");
@@ -79,7 +82,7 @@ export async function initializeStationSearch() {
 }
 
 // ==========================================
-// Attach Search To Any Input
+// Attach Search
 // ==========================================
 
 export function attachStationSearch(input, suggestionBox) {
@@ -109,6 +112,7 @@ function searchStations(query, container, input) {
     if (query.length < 2) return;
 
     const results = stations
+
         .filter(station => {
 
             const name = (station.name || "").toLowerCase();
@@ -120,6 +124,36 @@ function searchStations(query, container, input) {
             );
 
         })
+
+        .sort((a, b) => {
+
+            const an = (a.name || "").toLowerCase();
+            const bn = (b.name || "").toLowerCase();
+
+            const ac = (a.code || "").toLowerCase();
+            const bc = (b.code || "").toLowerCase();
+
+            // Exact code
+            if (ac === query && bc !== query) return -1;
+            if (bc === query && ac !== query) return 1;
+
+            // Exact name
+            if (an === query && bn !== query) return -1;
+            if (bn === query && an !== query) return 1;
+
+            // Code starts with query
+            if (ac.startsWith(query) && !bc.startsWith(query)) return -1;
+            if (bc.startsWith(query) && !ac.startsWith(query)) return 1;
+
+            // Name starts with query
+            if (an.startsWith(query) && !bn.startsWith(query)) return -1;
+            if (bn.startsWith(query) && !an.startsWith(query)) return 1;
+
+            // Shorter names first
+            return an.length - bn.length;
+
+        })
+
         .slice(0, 10);
 
     if (results.length === 0) {
@@ -146,16 +180,11 @@ function searchStations(query, container, input) {
             <small>${station.code || "No Code"}</small>
         `;
 
-        div.addEventListener("click", () => {
+        div.onclick = () => {
 
             const label = station.code
                 ? `${station.name} (${station.code})`
                 : station.name;
-
-            const nearestNode = findNearestNode(
-                station.lat,
-                station.lon
-            );
 
             input.value = label;
 
@@ -165,7 +194,12 @@ function searchStations(query, container, input) {
             input.dataset.lat = station.lat;
             input.dataset.lon = station.lon;
 
-            input.dataset.node = nearestNode;
+            input.dataset.node =
+                station.graph_node ??
+                findNearestNode(
+                    station.lat,
+                    station.lon
+                );
 
             showStation(
                 station.lat,
@@ -175,7 +209,7 @@ function searchStations(query, container, input) {
 
             container.innerHTML = "";
 
-        });
+        };
 
         container.appendChild(div);
 

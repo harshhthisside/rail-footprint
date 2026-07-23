@@ -12,6 +12,15 @@ let stationMarker = null;
 const journeyLayers = new Map();
 
 // ------------------------------------------
+// India Bounds
+// ------------------------------------------
+
+const INDIA_BOUNDS = L.latLngBounds(
+    [6.0, 67.0],     // South-West
+    [37.5, 98.0]     // North-East
+);
+
+// ------------------------------------------
 // Initialize
 // ------------------------------------------
 
@@ -19,10 +28,18 @@ export function initializeMap() {
 
     map = L.map("map", {
         zoomControl: false,
-        preferCanvas: true
+        preferCanvas: true,
+
+        // Lock map to India
+        maxBounds: INDIA_BOUNDS,
+        maxBoundsViscosity: 1.0,
+
+        minZoom: 5,
+        maxZoom: 18
     });
 
-    map.setView([22.8, 80.9], 5);
+    // Fit India in view
+    map.fitBounds(INDIA_BOUNDS);
 
     L.control.zoom({
         position: "topright"
@@ -142,8 +159,6 @@ export function drawJourney(id, coordinates) {
 
 export function drawAllJourneys(journeys) {
 
-    // Remove existing
-
     journeyLayers.forEach(layer => {
 
         map.removeLayer(layer);
@@ -185,9 +200,15 @@ export function drawAllJourneys(journeys) {
 
         map.fitBounds(bounds, {
 
-            padding: [40, 40]
+            padding: [40, 40],
+            maxZoom: 8
 
         });
+
+    }
+    else {
+
+        map.fitBounds(INDIA_BOUNDS);
 
     }
 
@@ -206,7 +227,8 @@ export function focusJourney(id) {
 
     map.fitBounds(layer.getBounds(), {
 
-        padding: [40, 40]
+        padding: [40, 40],
+        maxZoom: 8
 
     });
 

@@ -43,6 +43,7 @@ export async function loadGraph() {
 
 // ==========================================
 // Find Nearest Graph Node
+// (Fallback only)
 // ==========================================
 
 export function findNearestNode(lat, lon) {
@@ -73,14 +74,36 @@ export function findNearestNode(lat, lon) {
 }
 
 // ==========================================
+// Get Graph Node
+// Uses graph_node from station_index.json
+// Falls back to nearest search if absent
+// ==========================================
+
+function getGraphNode(station) {
+
+    if (
+        station.graph_node !== undefined &&
+        station.graph_node !== null
+    ) {
+
+        return station.graph_node;
+
+    }
+
+    console.warn(
+        "Station has no graph_node. Falling back to nearest search:",
+        station.code
+    );
+
+    return findNearestNode(
+        station.lat,
+        station.lon
+    );
+
+}
+
+// ==========================================
 // Calculate Route
-// Accepts:
-// [
-//   origin,
-//   stop1,
-//   stop2,
-//   destination
-// ]
 // ==========================================
 
 export function calculateRoute(stations) {
@@ -92,30 +115,35 @@ export function calculateRoute(stations) {
 
     for (let i = 0; i < stations.length - 1; i++) {
 
-        const startNode = findNearestNode(
-
-            stations[i].lat,
-            stations[i].lon
-
-        );
-
-        const endNode = findNearestNode(
-
-            stations[i + 1].lat,
-            stations[i + 1].lon
-
-        );
+        const startNode = getGraphNode(stations[i]);
+        const endNode = getGraphNode(stations[i + 1]);
 
         console.log(
             `Segment ${i + 1}: ${startNode} → ${endNode}`
         );
+
+        if (
+            startNode < 0 ||
+            endNode < 0 ||
+            startNode >= graphNodes.length ||
+            endNode >= graphNodes.length
+        ) {
+
+            console.error("Invalid graph node", {
+                startNode,
+                endNode
+            });
+
+            return [];
+
+        }
 
         const nodePath = shortestPath(
             startNode,
             endNode
         );
 
-        if (nodePath.length === 0) {
+        if (!nodePath || nodePath.length === 0) {
 
             console.warn("No route found.");
 
@@ -130,7 +158,6 @@ export function calculateRoute(stations) {
 
         ]);
 
-        // Avoid duplicate connection point
         if (i > 0)
             coordinates.shift();
 
