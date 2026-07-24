@@ -2,7 +2,7 @@
 // Rail Footprint
 // Journey Manager
 // ==========================================
-
+import { simplifyRoute } from "./routeSimplifier.js";
 import {
     saveJourney,
     updateJourney,
@@ -105,7 +105,12 @@ async function createJourney() {
 
     console.table(stops);
 
-    const coordinates = calculateRoute(stops);
+   const coordinates = calculateRoute(stops);
+
+ const optimizedRoute = simplifyRoute(
+    coordinates,
+    2000
+ );
 
     if (!coordinates || coordinates.length === 0) {
 
@@ -123,10 +128,10 @@ async function createJourney() {
 
         intermediates: stops.slice(1, -1),
 
-        route: coordinates.map(point => ({
-            lat: point[0],
-            lon: point[1]
-        })),
+       route: optimizedRoute.map(point => ({
+     lat: point[0],
+     lon: point[1]
+      })),
 
         createdAt: Date.now()
 

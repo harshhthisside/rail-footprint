@@ -6,16 +6,12 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 
 import {
-    getFirestore,
-    collection,
-    addDoc,
-    getDocs,
-    deleteDoc,
-    doc,
-    query,
-    where,
-    orderBy
+    getFirestore
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+
+import {
+    getStorage
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js";
 
 import {
     getAuth,
@@ -25,7 +21,9 @@ import {
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 
-// ------------------------------------------
+// ==========================================
+// Firebase Config
+// ==========================================
 
 const firebaseConfig = {
 
@@ -43,17 +41,26 @@ const firebaseConfig = {
 
 };
 
-// ------------------------------------------
+// ==========================================
+// Initialize Firebase
+// ==========================================
 
 const app = initializeApp(firebaseConfig);
 
+// Firestore
 export const db = getFirestore(app);
 
+// Firebase Storage
+export const storage = getStorage(app);
+
+// Authentication
 export const auth = getAuth(app);
 
 export const provider = new GoogleAuthProvider();
 
-// ------------------------------------------
+// ==========================================
+// Authentication
+// ==========================================
 
 export async function login() {
 
