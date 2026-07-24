@@ -183,120 +183,297 @@ export async function renderJourneys() {
 
     const journeys = await loadJourneys();
 
-drawAllJourneys(journeys);
+    drawAllJourneys(journeys);
 
-await loadStatistics();
+    await loadStatistics();
+
 
     if (!journeys.length) {
 
-        journeyList.innerHTML = "<p>No journeys added yet.</p>";
+        journeyList.innerHTML =
+            "<p>No journeys added yet.</p>";
 
-await loadStatistics();
-
-return;
+        return;
 
     }
 
+
     journeyList.innerHTML = "";
 
+
     journeys.forEach(journey => {
+
 
         const card = document.createElement("div");
 
         card.className = "journey-card";
 
+
+        const totalStations =
+            1 +
+            (journey.intermediates?.length || 0) +
+            1;
+
+
+
         let timeline = "";
+
 
         timeline += `
             <div class="timeline-item">
-                <div class="station-name">${journey.origin.name}</div>
-                <div class="station-code">${journey.origin.code}</div>
+
+                <div class="station-name">
+                    ${journey.origin.name}
+                </div>
+
+                <div class="station-code">
+                    ${journey.origin.code}
+                </div>
+
             </div>
         `;
+
+
 
         (journey.intermediates || []).forEach(stop => {
 
             timeline += `
+
                 <div class="timeline-item">
-                    <div class="station-name">${stop.name}</div>
-                    <div class="station-code">${stop.code}</div>
+
+                    <div class="station-name">
+                        ${stop.name}
+                    </div>
+
+                    <div class="station-code">
+                        ${stop.code}
+                    </div>
+
                 </div>
+
             `;
 
         });
 
+
+
         timeline += `
+
             <div class="timeline-item">
-                <div class="station-name">${journey.destination.name}</div>
-                <div class="station-code">${journey.destination.code}</div>
+
+                <div class="station-name">
+                    ${journey.destination.name}
+                </div>
+
+                <div class="station-code">
+                    ${journey.destination.code}
+                </div>
+
             </div>
+
         `;
 
+
+
         card.innerHTML = `
+
+
             <h3>
-                ${journey.origin.code}
+                🚆 ${journey.origin.code}
                 →
                 ${journey.destination.code}
             </h3>
 
-            <div class="timeline">
-                ${timeline}
+
+            <p class="journey-route-name">
+
+                ${journey.origin.name}
+
+                →
+
+                ${journey.destination.name}
+
+            </p>
+
+
+
+            <div class="journey-meta">
+
+                🚉 ${totalStations} Stations
+
             </div>
+
+
+
+            <button class="expandRoute">
+
+                ▼ Expand Route
+
+            </button>
+
+
+
+            <div class="timeline hidden">
+
+                ${timeline}
+
+            </div>
+
+
 
             <div class="journey-actions">
 
-    <button class="editJourney">
 
-        ✏ Edit
+                <button class="editJourney">
 
-    </button>
+                    ✏ Edit
 
-    <button class="deleteJourney">
+                </button>
 
-        🗑 Delete
 
-    </button>
 
-</div>
+                <button class="deleteJourney">
+
+                    🗑 Delete
+
+                </button>
+
+
+            </div>
+
+
         `;
 
-        // Focus map on click
-        card.addEventListener("click", () => {
 
-            focusJourney(journey.id);
 
-        });
+        // ==================================
+        // Expand Route
+        // ==================================
 
-        // Delete journey
-        card.querySelector(".editJourney")
-.addEventListener("click", (e) => {
+        const expandBtn =
+            card.querySelector(".expandRoute");
 
-    e.stopPropagation();
 
-    loadJourneyForEditing(journey);
+        const timelineBox =
+            card.querySelector(".timeline");
 
-});
-        card.querySelector(".deleteJourney")
-            .addEventListener("click", async (e) => {
+
+
+        expandBtn.addEventListener(
+            "click",
+            (e)=>{
+
 
                 e.stopPropagation();
 
-                if (!confirm("Delete this journey?"))
-                    return;
 
-                await removeJourney(journey.id);
+                timelineBox.classList.toggle(
+                    "hidden"
+                );
 
-removeJourneyFromMap(journey.id);
 
-await renderJourneys();
+                if (
+                    timelineBox.classList.contains(
+                        "hidden"
+                    )
+                ){
 
-await loadStatistics();
+                    expandBtn.innerHTML =
+                        "▼ Expand Route";
 
-            });
+                }
+                else {
+
+                    expandBtn.innerHTML =
+                        "▲ Hide Route";
+
+                }
+
+
+            }
+        );
+
+
+
+        // Focus map
+
+        card.addEventListener(
+            "click",
+            ()=>{
+
+                focusJourney(journey.id);
+
+            }
+        );
+
+
+
+        // Edit
+
+        card.querySelector(".editJourney")
+        .addEventListener(
+            "click",
+            (e)=>{
+
+
+                e.stopPropagation();
+
+
+                loadJourneyForEditing(journey);
+
+
+            }
+        );
+
+
+
+        // Delete
+
+        card.querySelector(".deleteJourney")
+        .addEventListener(
+            "click",
+            async (e)=>{
+
+
+                e.stopPropagation();
+
+
+
+                if(
+                    !confirm(
+                        "Delete this journey?"
+                    )
+                )
+                return;
+
+
+
+                await removeJourney(
+                    journey.id
+                );
+
+
+                removeJourneyFromMap(
+                    journey.id
+                );
+
+
+                await renderJourneys();
+
+
+                await loadStatistics();
+
+
+            }
+        );
+
+
 
         journeyList.appendChild(card);
 
+
     });
+
 
 }
 // ==========================================

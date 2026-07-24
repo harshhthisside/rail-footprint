@@ -310,3 +310,15 @@
     }
 
 }
+.timeline.hidden{
+
+    display:none;
+
+}
+
+
+.expandRoute{
+
+    margin:12px 0;
+
+}
