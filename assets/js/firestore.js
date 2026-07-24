@@ -16,11 +16,10 @@ import {
     query,
     where,
     orderBy,
-    updateDoc
+    updateDoc,
+    getDoc
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
-// ==========================================
-// Collection
 // ==========================================
 
 const journeysRef = collection(db, "journeys");
@@ -32,7 +31,7 @@ const journeysRef = collection(db, "journeys");
 export async function saveJourney(journey) {
 
     if (!auth.currentUser)
-        throw new Error("Login required");
+        throw new Error("Please sign in first.");
 
     await addDoc(journeysRef, {
 
@@ -47,7 +46,7 @@ export async function saveJourney(journey) {
 }
 
 // ==========================================
-// Load Journeys
+// Load Current User Journeys
 // ==========================================
 
 export async function loadJourneys() {
@@ -83,9 +82,24 @@ export async function loadJourneys() {
 
 export async function updateJourney(id, journey) {
 
+    if (!auth.currentUser)
+        throw new Error("Please sign in first.");
+
     const ref = doc(db, "journeys", id);
 
-    await updateDoc(ref, journey);
+    const snapshot = await getDoc(ref);
+
+    if (!snapshot.exists())
+        throw new Error("Journey not found.");
+
+    if (snapshot.data().owner !== auth.currentUser.uid)
+        throw new Error("Permission denied.");
+
+    await updateDoc(ref, {
+
+        ...journey
+
+    });
 
 }
 
@@ -95,6 +109,19 @@ export async function updateJourney(id, journey) {
 
 export async function removeJourney(id) {
 
-    await deleteDoc(doc(db, "journeys", id));
+    if (!auth.currentUser)
+        throw new Error("Please sign in first.");
+
+    const ref = doc(db, "journeys", id);
+
+    const snapshot = await getDoc(ref);
+
+    if (!snapshot.exists())
+        throw new Error("Journey not found.");
+
+    if (snapshot.data().owner !== auth.currentUser.uid)
+        throw new Error("Permission denied.");
+
+    await deleteDoc(ref);
 
 }

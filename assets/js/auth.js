@@ -24,7 +24,12 @@ export async function login() {
 
     try {
 
-        await signInWithPopup(auth, provider);
+        const result = await signInWithPopup(auth, provider);
+
+        console.log(
+            "Logged in:",
+            result.user.displayName
+        );
 
     }
     catch (error) {
@@ -43,12 +48,23 @@ export async function login() {
 
 export async function logout() {
 
-    await signOut(auth);
+    try {
+
+        await signOut(auth);
+
+    }
+    catch (error) {
+
+        console.error(error);
+
+        alert(error.message);
+
+    }
 
 }
 
 // ==========================================
-// Current User
+// Get Current User
 // ==========================================
 
 export function getCurrentUser() {
@@ -63,15 +79,30 @@ export function getCurrentUser() {
 
 export function initializeAuth(callback = null) {
 
-    onAuthStateChanged(auth, user => {
+    onAuthStateChanged(auth, async (user) => {
 
         currentUser = user;
 
-        console.log("Auth State:", user);
+        if (user) {
+
+            console.log("Signed In");
+
+            console.log("UID :", user.uid);
+
+            console.log("Name:", user.displayName);
+
+            console.log("Mail:", user.email);
+
+        }
+        else {
+
+            console.log("Signed Out");
+
+        }
 
         if (callback) {
 
-            callback(user);
+            await callback(user);
 
         }
 

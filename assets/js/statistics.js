@@ -17,11 +17,10 @@ function haversine(lat1, lon1, lat2, lon2) {
     const dLon = (lon2 - lon1) * Math.PI / 180;
 
     const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.sin(dLat / 2) ** 2 +
         Math.cos(lat1 * Math.PI / 180) *
         Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+        Math.sin(dLon / 2) ** 2;
 
     const c = 2 * Math.atan2(
         Math.sqrt(a),
@@ -44,15 +43,17 @@ export async function loadStatistics() {
 
     let totalDistance = 0;
 
-    let longest = "";
-
     let longestDistance = 0;
 
-    journeys.forEach(journey => {
+    let longestJourney = "-";
 
-        stationSet.add(journey.origin.code);
+    for (const journey of journeys) {
 
-        stationSet.add(journey.destination.code);
+        if (journey.origin)
+            stationSet.add(journey.origin.code);
+
+        if (journey.destination)
+            stationSet.add(journey.destination.code);
 
         (journey.intermediates || []).forEach(stop => {
 
@@ -60,13 +61,13 @@ export async function loadStatistics() {
 
         });
 
-        let journeyDistance = 0;
-
         const route = journey.route || [];
+
+        let distance = 0;
 
         for (let i = 1; i < route.length; i++) {
 
-            journeyDistance += haversine(
+            distance += haversine(
 
                 route[i - 1].lat,
                 route[i - 1].lon,
@@ -78,29 +79,29 @@ export async function loadStatistics() {
 
         }
 
-        totalDistance += journeyDistance;
+        totalDistance += distance;
 
-        if (journeyDistance > longestDistance) {
+        if (distance > longestDistance) {
 
-            longestDistance = journeyDistance;
+            longestDistance = distance;
 
-            longest =
+            longestJourney =
                 `${journey.origin.code} → ${journey.destination.code}`;
 
         }
 
-    });
+    }
 
     document.getElementById("statJourneys").textContent =
-        journeys.length;
+        journeys.length.toLocaleString();
 
     document.getElementById("statStations").textContent =
-        stationSet.size;
+        stationSet.size.toLocaleString();
 
     document.getElementById("statDistance").textContent =
         `${Math.round(totalDistance).toLocaleString()} km`;
 
     document.getElementById("statLongest").textContent =
-        longest || "-";
+        longestJourney;
 
 }

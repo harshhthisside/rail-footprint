@@ -146,10 +146,12 @@ async function initializeApp() {
 
         initializeIntermediateEvents();
 
-        addIntermediateBtn?.addEventListener(
-            "click",
-            addIntermediateStation
-        );
+        // IMPORTANT FIX
+        addIntermediateBtn?.addEventListener("click", () => {
+
+            addIntermediateStation();
+
+        });
 
         // ==========================================
         // Journey Manager
@@ -222,7 +224,8 @@ async function initializeApp() {
         // ==========================================
         // Authentication
         // ==========================================
-                initializeAuth(async (user) => {
+
+        initializeAuth(async (user) => {
 
             const userName =
                 document.getElementById("userName");
@@ -243,7 +246,6 @@ async function initializeApp() {
                     user.displayName;
 
                 await renderJourneys();
-
                 await loadStatistics();
 
             }
@@ -310,7 +312,7 @@ async function initializeApp() {
         });
 
         // ==========================================
-        // Application Ready
+        // Ready
         // ==========================================
 
         console.log("=================================");

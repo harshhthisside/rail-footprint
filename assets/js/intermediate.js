@@ -53,7 +53,7 @@ export function addIntermediateStation(station = null) {
     );
 
     // --------------------------------------
-    // Prefill station (used while editing)
+    // Editing Existing Journey
     // --------------------------------------
 
     if (station) {
@@ -69,6 +69,28 @@ export function addIntermediateStation(station = null) {
 
     }
 
+    // --------------------------------------
+    // New Intermediate
+    // --------------------------------------
+
+    else {
+
+        input.value = "";
+
+        input.dataset.name = "";
+        input.dataset.code = "";
+        input.dataset.lat = "";
+        input.dataset.lon = "";
+
+        // Automatically place cursor
+        requestAnimationFrame(() => {
+
+            input.focus();
+
+        });
+
+    }
+
     updateLabels();
 
     return input;
@@ -76,7 +98,7 @@ export function addIntermediateStation(station = null) {
 }
 
 // ==========================================
-// Remove
+// Remove Intermediate
 // ==========================================
 
 export function initializeIntermediateEvents() {
@@ -109,7 +131,7 @@ export function clearIntermediateStations() {
 }
 
 // ==========================================
-// Renumber
+// Renumber Labels
 // ==========================================
 
 function updateLabels() {
@@ -128,7 +150,7 @@ function updateLabels() {
 }
 
 // ==========================================
-// Inputs
+// Get Intermediate Inputs
 // ==========================================
 
 export function getIntermediateInputs() {
