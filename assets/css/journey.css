@@ -322,3 +322,14 @@
     margin:12px 0;
 
 }
+.load-more-journeys{
+
+    width:100%;
+    margin-top:20px;
+    padding:12px;
+
+    border-radius:12px;
+
+    cursor:pointer;
+
+}

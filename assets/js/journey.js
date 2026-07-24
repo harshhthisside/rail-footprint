@@ -28,8 +28,16 @@ import { loadStatistics } from "./statistics.js";
 
 const addJourneyBtn = document.getElementById("addJourneyBtn");
 const journeyList = document.getElementById("journeyList");
+const loadMoreBtn = document.createElement("button");
+
+loadMoreBtn.className = "load-more-journeys";
+
+loadMoreBtn.innerHTML =
+    "🚆 Explore More Journeys";
 
 let initialized = false;
+
+let visibleJourneyCount = 8;
 
 // ==========================================
 // Edit Mode
@@ -46,6 +54,16 @@ export function initializeJourneyManager() {
     renderJourneys();
 
     addJourneyBtn.addEventListener("click", createJourney);
+    loadMoreBtn.addEventListener(
+    "click",
+    async ()=>{
+
+        visibleJourneyCount += 8;
+
+        await renderJourneys();
+
+    }
+);
 
 }
 
@@ -183,6 +201,7 @@ export async function renderJourneys() {
 
     const journeys = await loadJourneys();
 
+    // Map always receives ALL journeys
     drawAllJourneys(journeys);
 
     await loadStatistics();
@@ -201,7 +220,12 @@ export async function renderJourneys() {
     journeyList.innerHTML = "";
 
 
-    journeys.forEach(journey => {
+    const visibleJourneys =
+        journeys.slice(0, visibleJourneyCount);
+
+
+
+    visibleJourneys.forEach(journey => {
 
 
         const card = document.createElement("div");
@@ -220,6 +244,7 @@ export async function renderJourneys() {
 
 
         timeline += `
+
             <div class="timeline-item">
 
                 <div class="station-name">
@@ -231,11 +256,13 @@ export async function renderJourneys() {
                 </div>
 
             </div>
+
         `;
 
 
 
         (journey.intermediates || []).forEach(stop => {
+
 
             timeline += `
 
@@ -252,6 +279,7 @@ export async function renderJourneys() {
                 </div>
 
             `;
+
 
         });
 
@@ -276,7 +304,6 @@ export async function renderJourneys() {
 
 
         card.innerHTML = `
-
 
             <h3>
                 🚆 ${journey.origin.code}
@@ -323,7 +350,6 @@ export async function renderJourneys() {
 
             <div class="journey-actions">
 
-
                 <button class="editJourney">
 
                     ✏ Edit
@@ -338,17 +364,13 @@ export async function renderJourneys() {
 
                 </button>
 
-
             </div>
-
 
         `;
 
 
 
-        // ==================================
         // Expand Route
-        // ==================================
 
         const expandBtn =
             card.querySelector(".expandRoute");
@@ -363,7 +385,6 @@ export async function renderJourneys() {
             "click",
             (e)=>{
 
-
                 e.stopPropagation();
 
 
@@ -372,22 +393,12 @@ export async function renderJourneys() {
                 );
 
 
-                if (
-                    timelineBox.classList.contains(
-                        "hidden"
-                    )
-                ){
-
-                    expandBtn.innerHTML =
-                        "▼ Expand Route";
-
-                }
-                else {
-
-                    expandBtn.innerHTML =
-                        "▲ Hide Route";
-
-                }
+                expandBtn.innerHTML =
+                    timelineBox.classList.contains("hidden")
+                    ?
+                    "▼ Expand Route"
+                    :
+                    "▲ Hide Route";
 
 
             }
@@ -415,12 +426,9 @@ export async function renderJourneys() {
             "click",
             (e)=>{
 
-
                 e.stopPropagation();
 
-
                 loadJourneyForEditing(journey);
-
 
             }
         );
@@ -436,7 +444,6 @@ export async function renderJourneys() {
 
 
                 e.stopPropagation();
-
 
 
                 if(
@@ -458,6 +465,9 @@ export async function renderJourneys() {
                 );
 
 
+                visibleJourneyCount = 8;
+
+
                 await renderJourneys();
 
 
@@ -473,6 +483,20 @@ export async function renderJourneys() {
 
 
     });
+
+
+
+    // Add button AFTER all cards
+
+    if(
+        visibleJourneyCount < journeys.length
+    ){
+
+        journeyList.appendChild(
+            loadMoreBtn
+        );
+
+    }
 
 
 }

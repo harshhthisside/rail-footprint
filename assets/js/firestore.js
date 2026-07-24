@@ -54,17 +54,27 @@ export async function loadJourneys() {
     if (!auth.currentUser)
         return [];
 
+
     const q = query(
 
         journeysRef,
 
-        where("owner", "==", auth.currentUser.uid),
+        where(
+            "owner",
+            "==",
+            auth.currentUser.uid
+        ),
 
-        orderBy("createdAt", "asc")
+        orderBy(
+            "createdAt",
+            "desc"
+        )
 
     );
 
+
     const snap = await getDocs(q);
+
 
     return snap.docs.map(doc => ({
 
