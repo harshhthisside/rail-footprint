@@ -1,0 +1,285 @@
+/* ==========================================
+   RAIL FOOTPRINT
+   USER EXPLORER
+========================================== */
+
+
+#usersSection{
+
+    margin-bottom:30px;
+
+}
+
+
+
+.user-list{
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:14px;
+
+}
+
+
+
+/* ==========================================
+   USER CARD
+========================================== */
+
+
+.user-card{
+
+    padding:18px;
+
+    border-radius:22px;
+
+    background:var(--card);
+
+    border:1px solid var(--border);
+
+    box-shadow:var(--shadow-sm);
+
+    transition:.3s;
+
+}
+
+
+
+.user-card:hover{
+
+    transform:translateY(-4px);
+
+    box-shadow:var(--shadow);
+
+}
+
+
+
+
+
+/* ==========================================
+   HEADER
+========================================== */
+
+
+.user-header{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:14px;
+
+}
+
+
+
+.user-avatar{
+
+    width:58px;
+
+    height:58px;
+
+    border-radius:50%;
+
+    object-fit:cover;
+
+    border:3px solid rgba(37,99,235,.18);
+
+}
+
+
+
+.user-header h3{
+
+    margin:0;
+
+    font-size:17px;
+
+    font-weight:750;
+
+    color:var(--text);
+
+}
+
+
+
+.user-header p{
+
+    margin-top:5px;
+
+    font-size:13px;
+
+    color:var(--text-secondary);
+
+}
+
+
+
+
+/* ==========================================
+   PUBLIC BADGE
+========================================== */
+
+
+.user-preview{
+
+    margin-top:16px;
+
+    padding:12px 14px;
+
+    border-radius:14px;
+
+    background:rgba(37,99,235,.08);
+
+    color:var(--primary);
+
+    font-size:13px;
+
+    font-weight:700;
+
+}
+
+
+
+
+
+/* ==========================================
+   BUTTON
+========================================== */
+
+
+.view-user{
+
+    width:100%;
+
+    margin-top:14px;
+
+    padding:13px;
+
+
+    border:none;
+
+    border-radius:16px;
+
+
+    background:linear-gradient(
+        135deg,
+        #2563eb,
+        #60a5fa
+    );
+
+
+    color:white;
+
+    font-size:14px;
+
+    font-weight:700;
+
+
+    cursor:pointer;
+
+    transition:.3s;
+
+}
+
+
+
+.view-user:hover{
+
+    transform:translateY(-2px);
+
+    box-shadow:
+    0 12px 25px rgba(37,99,235,.25);
+
+}
+
+
+
+
+
+
+
+/* ==========================================
+   VIEWING USER CARD
+========================================== */
+
+
+.viewing-user-card{
+
+
+    padding:18px;
+
+    margin-bottom:22px;
+
+    border-radius:22px;
+
+
+    background:
+    linear-gradient(
+        135deg,
+        rgba(37,99,235,.12),
+        rgba(96,165,250,.08)
+    );
+
+
+    border:1px solid rgba(37,99,235,.18);
+
+
+}
+
+
+
+.viewing-title{
+
+    font-size:12px;
+
+    text-transform:uppercase;
+
+    letter-spacing:.08em;
+
+    color:var(--text-secondary);
+
+    margin-bottom:8px;
+
+}
+
+
+
+.viewing-user-card h3{
+
+    margin:0 0 14px;
+
+    color:var(--text);
+
+}
+
+
+
+
+#backToMyFootprint{
+
+
+    width:100%;
+
+    padding:12px;
+
+
+    border:none;
+
+    border-radius:14px;
+
+
+    background:var(--card);
+
+    color:var(--text);
+
+
+    font-weight:700;
+
+
+    border:1px solid var(--border);
+
+}

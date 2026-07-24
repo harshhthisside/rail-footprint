@@ -920,3 +920,195 @@ export function removeJourneyFromMap(id){
 
 
 }
+// ==========================================
+// Draw Other User Footprint
+// ==========================================
+
+export function drawUserFootprint(journeys){
+
+
+    // clear existing map
+
+    journeyLayers.forEach(layer=>{
+
+
+        map.removeLayer(
+            layer.main
+        );
+
+
+        map.removeLayer(
+            layer.glow
+        );
+
+
+    });
+
+
+
+    stationDots.forEach(dot=>{
+
+
+        map.removeLayer(
+            dot.origin
+        );
+
+
+        map.removeLayer(
+            dot.destination
+        );
+
+
+    });
+
+
+
+    journeyLayers.clear();
+
+    stationDots.clear();
+
+
+
+    const bounds=[];
+
+
+
+    journeys.forEach((journey,index)=>{
+
+
+        if(!journey.route?.length)
+
+            return;
+
+
+
+        const color =
+
+        ROUTE_COLORS[
+
+            index %
+
+            ROUTE_COLORS.length
+
+        ];
+
+
+
+        const glow =
+
+        L.polyline(
+
+            journey.route,
+
+            {
+
+                color,
+
+                weight:8,
+
+                opacity:0.12,
+
+                lineCap:"round",
+
+                lineJoin:"round"
+
+            }
+
+        )
+
+        .addTo(map);
+
+
+
+
+        const main =
+
+        L.polyline(
+
+            journey.route,
+
+            {
+
+                color,
+
+                weight:4,
+
+                opacity:0.88,
+
+                lineCap:"round",
+
+                lineJoin:"round"
+
+            }
+
+        )
+
+        .addTo(map);
+
+
+
+        journeyLayers.set(
+
+            journey.id,
+
+            {
+
+                main,
+
+                glow
+
+            }
+
+        );
+
+
+
+        addJourneyStations(
+
+            journey.id,
+
+            journey.route,
+
+            journey.origin?.name || "Origin",
+
+            journey.destination?.name || "Destination"
+
+        );
+
+
+
+        bounds.push(
+
+            ...journey.route
+
+        );
+
+
+    });
+
+
+
+    if(bounds.length){
+
+
+        map.fitBounds(
+
+            bounds,
+
+            {
+
+                padding:[80,80],
+
+                maxZoom:7,
+
+                animate:true
+
+            }
+
+        );
+
+
+    }
+
+
+}

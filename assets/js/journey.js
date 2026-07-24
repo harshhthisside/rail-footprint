@@ -312,16 +312,6 @@ export async function renderJourneys() {
             </h3>
 
 
-            <p class="journey-route-name">
-
-                ${journey.origin.name}
-
-                →
-
-                ${journey.destination.name}
-
-            </p>
-
 
 
             <div class="journey-meta">

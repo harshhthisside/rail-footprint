@@ -3,31 +3,45 @@
 // Main Application
 // ==========================================
 
+
+import {
+    initializeUsers,
+    viewingOtherUser
+} from "./users.js";
+
+
 import {
     initializeMapSearch
 } from "./mapSearch.js";
+
+
 import {
     initializeMap,
     refreshMap
 } from "./map.js";
 
+
 import {
     initializeStationSearch
 } from "./stations.js";
 
+
 import {
     loadGraph
 } from "./routing.js";
+
 
 import {
     initializeJourneyManager,
     renderJourneys
 } from "./journey.js";
 
+
 import {
     addIntermediateStation,
     initializeIntermediateEvents
 } from "./intermediate.js";
+
 
 import {
     initializeAuth,
@@ -35,324 +49,705 @@ import {
     logout
 } from "./auth.js";
 
+
 import {
     loadStatistics
 } from "./statistics.js";
 
-async function initializeApp() {
+
+
+
+
+async function initializeApp(){
+
 
     console.log("=================================");
     console.log("Rail Footprint");
     console.log("=================================");
 
-    try {
+
+
+    try{
+
+
 
         // ==========================================
-        // DOM References
+        // DOM
         // ==========================================
+
 
         const menuToggle =
-            document.getElementById("menuToggle");
+            document.getElementById(
+                "menuToggle"
+            );
+
 
         const sidebar =
-            document.getElementById("sidebar");
+            document.getElementById(
+                "sidebar"
+            );
+
 
         const overlay =
-            document.getElementById("sidebarOverlay");
+            document.getElementById(
+                "sidebarOverlay"
+            );
+
 
         const loginBtn =
-            document.getElementById("loginBtn");
+            document.getElementById(
+                "loginBtn"
+            );
+
 
         const logoutBtn =
-            document.getElementById("logoutBtn");
+            document.getElementById(
+                "logoutBtn"
+            );
+
 
         const addIntermediateBtn =
-            document.getElementById("addIntermediateBtn");
+            document.getElementById(
+                "addIntermediateBtn"
+            );
+
 
         const addJourneyBtn =
-            document.getElementById("addJourneyBtn");
+            document.getElementById(
+                "addJourneyBtn"
+            );
+
 
         const themeBtn =
-            document.getElementById("themeBtn");
+            document.getElementById(
+                "themeBtn"
+            );
+
+
+
+
+
 
         // ==========================================
-        // Login / Logout
+        // Auth Buttons
         // ==========================================
+
 
         loginBtn?.addEventListener(
             "click",
             login
         );
 
+
         logoutBtn?.addEventListener(
             "click",
             logout
         );
 
+
+
+
+
+
+
         // ==========================================
         // Theme
         // ==========================================
 
+
         const savedTheme =
-            localStorage.getItem("theme");
+            localStorage.getItem(
+                "theme"
+            );
 
-        if (savedTheme === "dark") {
 
-            document.body.classList.add("dark");
 
-            if (themeBtn) {
+        if(savedTheme==="dark"){
 
-                themeBtn.textContent = "☀️";
 
-            }
+            document.body.classList.add(
+                "dark"
+            );
+
+
+            if(themeBtn)
+                themeBtn.textContent="☀️";
+
 
         }
 
-        themeBtn?.addEventListener("click", () => {
 
-            document.body.classList.toggle("dark");
 
-            const dark =
-                document.body.classList.contains("dark");
 
-            localStorage.setItem(
-                "theme",
-                dark ? "dark" : "light"
-            );
+        themeBtn?.addEventListener(
+            "click",
+            ()=>{
 
-            themeBtn.textContent =
-                dark ? "☀️" : "🌙";
 
-        });
+                document.body.classList.toggle(
+                    "dark"
+                );
+
+
+
+                const dark =
+                document.body.classList.contains(
+                    "dark"
+                );
+
+
+
+                localStorage.setItem(
+                    "theme",
+                    dark ? "dark":"light"
+                );
+
+
+
+                themeBtn.textContent =
+                    dark ? "☀️":"🌙";
+
+
+
+            }
+        );
+
+
+
+
+
+
+
 
         // ==========================================
-        // Initialize Map
+        // Map
         // ==========================================
+
 
         initializeMap();
 
+
+
+
+
+
         // ==========================================
-        // Routing Graph
+        // Railway Data
         // ==========================================
+
 
         await loadGraph();
 
+
+
+
+
         // ==========================================
-        // Station Search
+        // Search
         // ==========================================
+
 
         await initializeStationSearch();
 
+
         await initializeMapSearch();
 
+
+
+
+
+
+
         // ==========================================
-        // Intermediate Stations
+        // Intermediate
         // ==========================================
+
 
         initializeIntermediateEvents();
 
-        // IMPORTANT FIX
-        addIntermediateBtn?.addEventListener("click", () => {
 
-            addIntermediateStation();
 
-        });
+        addIntermediateBtn?.addEventListener(
+            "click",
+            ()=>{
+
+                addIntermediateStation();
+
+            }
+        );
+
+
+
+
+
+
+
 
         // ==========================================
         // Journey Manager
         // ==========================================
 
+
         initializeJourneyManager();
 
+
+
+
+
+
+
+
         // ==========================================
-        // Sidebar Helpers
+        // Sidebar
         // ==========================================
 
-        function openSidebar() {
 
-            if (!sidebar) return;
+        function openSidebar(){
 
-            sidebar.classList.add("open");
 
-            overlay?.classList.add("show");
+            sidebar?.classList.add(
+                "open"
+            );
+
+
+            overlay?.classList.add(
+                "show"
+            );
+
 
             refreshMap();
 
         }
 
-        function closeSidebar() {
 
-            if (!sidebar) return;
 
-            sidebar.classList.remove("open");
 
-            overlay?.classList.remove("show");
+        function closeSidebar(){
+
+
+            sidebar?.classList.remove(
+                "open"
+            );
+
+
+            overlay?.classList.remove(
+                "show"
+            );
+
 
             refreshMap();
 
         }
 
-        // ==========================================
-        // Mobile Menu
-        // ==========================================
 
-        menuToggle?.addEventListener("click", () => {
 
-            if (sidebar?.classList.contains("open")) {
 
-                closeSidebar();
+
+
+
+        menuToggle?.addEventListener(
+            "click",
+            ()=>{
+
+
+                if(
+                    sidebar?.classList.contains(
+                        "open"
+                    )
+                ){
+
+                    closeSidebar();
+
+                }
+                else{
+
+                    openSidebar();
+
+                }
+
 
             }
-            else {
+        );
 
-                openSidebar();
 
-            }
-
-        });
 
         overlay?.addEventListener(
             "click",
             closeSidebar
         );
 
-        document.addEventListener("keydown", (e) => {
 
-            if (e.key === "Escape") {
 
-                closeSidebar();
+        document.addEventListener(
+            "keydown",
+            e=>{
 
-            }
-
-        });
-
-        // ==========================================
-        // Authentication
-        // ==========================================
-
-        initializeAuth(async (user) => {
-
-    const userName = document.getElementById("userName");
-    const profileImage = document.getElementById("profileImage");
-    const userStatus = document.getElementById("userStatus");
-
-    if (!loginBtn || !logoutBtn || !userName)
-        return;
-
-    if (user) {
-
-        console.log("Logged in:", user.displayName);
-
-        loginBtn.style.display = "none";
-        logoutBtn.style.display = "inline-block";
-
-        userName.textContent =
-            user.displayName || "Rail Explorer";
-
-        // Google profile photo
-        profileImage.src =
-            user.photoURL ||
-            `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || "User")}&background=0f766e&color=fff`;
-
-        // Signed in badge
-        userStatus.className = "profile-status online";
-
-userStatus.innerHTML = `
-    <span class="status-dot"></span>
-    Signed in
-`;
-
-        await renderJourneys();
-        await loadStatistics();
-
-    }
-    else {
-
-        loginBtn.style.display = "inline-block";
-        logoutBtn.style.display = "none";
-
-        userName.textContent = "Guest";
-
-        profileImage.src =
-            "https://ui-avatars.com/api/?name=Guest&background=0f766e&color=fff";
-
-        userStatus.className = "profile-status offline";
-
-userStatus.innerHTML = `
-    <span class="status-dot"></span>
-    Not signed in
-`;
-
-        const journeyList =
-            document.getElementById("journeyList");
-
-        if (journeyList) {
-
-            journeyList.innerHTML =
-                "<p>Please sign in to view your journeys.</p>";
-
-        }
-
-        document.getElementById("statJourneys").textContent = "0";
-        document.getElementById("statStations").textContent = "0";
-        document.getElementById("statDistance").textContent = "0 km";
-        document.getElementById("statLongest").textContent = "-";
-
-    }
-
-});
-
-        // ==========================================
-        // Auto Close Sidebar
-        // ==========================================
-
-        addJourneyBtn?.addEventListener("click", () => {
-
-            if (window.innerWidth <= 768) {
-
-                setTimeout(() => {
-
+                if(e.key==="Escape")
                     closeSidebar();
 
-                }, 350);
+            }
+        );
+
+
+
+
+
+
+
+
+
+        // ==========================================
+        // Authentication Listener
+        // ==========================================
+
+
+        initializeAuth(
+            async(user)=>{
+
+
+
+                const userName =
+                document.getElementById(
+                    "userName"
+                );
+
+
+
+                const profileImage =
+                document.getElementById(
+                    "profileImage"
+                );
+
+
+
+                const userStatus =
+                document.getElementById(
+                    "userStatus"
+                );
+
+
+
+
+
+
+                if(!userName)
+                    return;
+
+
+
+
+
+
+
+                if(user){
+
+
+
+                    console.log(
+                        "Logged in:",
+                        user.displayName
+                    );
+
+
+
+
+
+                    loginBtn.style.display =
+                        "none";
+
+
+
+                    logoutBtn.style.display =
+                        "inline-block";
+
+
+
+
+
+
+
+                    userName.textContent =
+                        user.displayName ||
+                        "Rail Explorer";
+
+
+
+
+
+
+
+                    profileImage.src =
+                    user.photoURL ||
+                    `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || "User")}&background=0f766e&color=fff`;
+
+
+
+
+
+
+
+                    userStatus.className =
+                        "profile-status online";
+
+
+
+
+                    userStatus.innerHTML =
+                    `
+                    <span class="status-dot"></span>
+                    Signed in
+                    `;
+
+
+
+
+
+
+
+
+
+                    // ==================================
+                    // IMPORTANT FIX
+                    // Only load own footprint
+                    // if not viewing another user
+                    // ==================================
+
+
+                    if(!viewingOtherUser){
+
+
+                        await renderJourneys();
+
+
+                        await loadStatistics();
+
+
+                    }
+
+
+
+
+
+
+
+                    // Load public explorer
+
+                    await initializeUsers();
+
+
+
+
+                }
+
+
+
+
+
+
+                else{
+
+
+
+                    loginBtn.style.display =
+                        "inline-block";
+
+
+                    logoutBtn.style.display =
+                        "none";
+
+
+
+
+                    userName.textContent =
+                        "Guest";
+
+
+
+
+                    profileImage.src =
+                    "https://ui-avatars.com/api/?name=Guest&background=0f766e&color=fff";
+
+
+
+
+
+                    userStatus.className =
+                        "profile-status offline";
+
+
+
+
+
+                    userStatus.innerHTML =
+                    `
+                    <span class="status-dot"></span>
+                    Not signed in
+                    `;
+
+
+
+
+                    const journeyList =
+                    document.getElementById(
+                        "journeyList"
+                    );
+
+
+
+                    if(journeyList){
+
+                        journeyList.innerHTML =
+                        `
+                        <p>
+                        Please sign in to view your journeys.
+                        </p>
+                        `;
+
+                    }
+
+
+
+
+
+
+                    document.getElementById(
+                        "statJourneys"
+                    ).textContent="0";
+
+
+
+                    document.getElementById(
+                        "statStations"
+                    ).textContent="0";
+
+
+
+                    document.getElementById(
+                        "statDistance"
+                    ).textContent="0 km";
+
+
+
+                    document.getElementById(
+                        "statLongest"
+                    ).textContent="-";
+
+
+
+                }
+
+
 
             }
+        );
 
-        });
+
+
+
+
+
+
+
 
         // ==========================================
-        // Window Resize
+        // Auto Close Mobile
         // ==========================================
 
-        window.addEventListener("resize", () => {
 
-            refreshMap();
+        addJourneyBtn?.addEventListener(
+            "click",
+            ()=>{
 
-            if (window.innerWidth > 768) {
 
-                closeSidebar();
+                if(window.innerWidth<=768){
+
+
+                    setTimeout(
+                        ()=>{
+                            closeSidebar();
+                        },
+                        350
+                    );
+
+
+                }
+
 
             }
+        );
 
-        });
+
+
+
+
+
+
+
 
         // ==========================================
-        // Ready
+        // Resize
         // ==========================================
 
-        console.log("=================================");
-        console.log("Application Ready");
-        console.log("=================================");
+
+        window.addEventListener(
+            "resize",
+            ()=>{
+
+
+                refreshMap();
+
+
+
+                if(window.innerWidth>768)
+                    closeSidebar();
+
+
+
+            }
+        );
+
+
+
+
+
+
+
+        console.log(
+            "================================="
+        );
+
+
+        console.log(
+            "Application Ready"
+        );
+
+
+        console.log(
+            "================================="
+        );
+
+
 
     }
-    catch (error) {
+
+
+    catch(error){
+
 
         console.error(error);
 
-        alert(error.message);
+
+        alert(
+            error.message
+        );
+
 
     }
 
+
+
 }
+
+
 
 initializeApp();

@@ -33,15 +33,13 @@ function haversine(lat1, lon1, lat2, lon2) {
 }
 
 
+
 // ==========================================
-// Load Statistics
+// Calculate Statistics
+// From Given Journeys
 // ==========================================
 
-export async function loadStatistics() {
-
-
-    const journeys =
-        await loadJourneys();
+export function calculateJourneyStatistics(journeys) {
 
 
     const stationSet =
@@ -61,16 +59,23 @@ export async function loadStatistics() {
     for (const journey of journeys) {
 
 
-        if (journey.origin)
+        if (journey.origin) {
+
             stationSet.add(
                 journey.origin.code
             );
 
+        }
 
-        if (journey.destination)
+
+
+        if (journey.destination) {
+
             stationSet.add(
                 journey.destination.code
             );
+
+        }
 
 
 
@@ -94,7 +99,11 @@ export async function loadStatistics() {
 
 
 
-        for (let i = 1; i < route.length; i++) {
+        for (
+            let i = 1;
+            i < route.length;
+            i++
+        ) {
 
 
             distance += haversine(
@@ -133,52 +142,103 @@ export async function loadStatistics() {
 
 
 
+    return {
+
+        journeys:
+            journeys.length,
+
+
+        stations:
+            stationSet.size,
+
+
+        distance:
+            Math.round(totalDistance),
+
+
+        longest:
+            longestJourney
+
+    };
+
+
+}
+
+
+
+// ==========================================
+// Load Current User Statistics
+// ==========================================
+
+export async function loadStatistics() {
+
+
+    const journeys =
+        await loadJourneys();
+
+
+
+    const stats =
+        calculateJourneyStatistics(
+            journeys
+        );
+
+
+
     // ==========================================
     // Sidebar Statistics
     // ==========================================
 
     const statJourneys =
-        document.getElementById("statJourneys");
+        document.getElementById(
+            "statJourneys"
+        );
 
 
     const statStations =
-        document.getElementById("statStations");
+        document.getElementById(
+            "statStations"
+        );
 
 
     const statDistance =
-        document.getElementById("statDistance");
+        document.getElementById(
+            "statDistance"
+        );
 
 
     const statLongest =
-        document.getElementById("statLongest");
+        document.getElementById(
+            "statLongest"
+        );
 
 
 
     if(statJourneys)
 
         statJourneys.textContent =
-            journeys.length.toLocaleString();
+            stats.journeys.toLocaleString();
 
 
 
     if(statStations)
 
         statStations.textContent =
-            stationSet.size.toLocaleString();
+            stats.stations.toLocaleString();
 
 
 
     if(statDistance)
 
         statDistance.textContent =
-            `${Math.round(totalDistance).toLocaleString()} km`;
+            `${stats.distance.toLocaleString()} km`;
 
 
 
     if(statLongest)
 
         statLongest.textContent =
-            longestJourney;
+            stats.longest;
 
 
 
@@ -203,14 +263,15 @@ export async function loadStatistics() {
     if(floatingJourneyCount)
 
         floatingJourneyCount.textContent =
-            journeys.length.toLocaleString();
+            stats.journeys.toLocaleString();
 
 
 
     if(floatingStationCount)
 
         floatingStationCount.textContent =
-            stationSet.size.toLocaleString();
+            stats.stations.toLocaleString();
+
 
 
 }

@@ -135,3 +135,73 @@ export async function removeJourney(id) {
     await deleteDoc(ref);
 
 }
+// ==========================================
+// Load All Users
+// ==========================================
+
+export async function loadUsers() {
+
+
+    const usersRef =
+        collection(
+            db,
+            "users"
+        );
+
+
+    const snap =
+        await getDocs(
+            usersRef
+        );
+
+
+    return snap.docs.map(doc => ({
+
+
+        id: doc.id,
+
+        ...doc.data()
+
+
+    }));
+
+}
+// ==========================================
+// Load Other User Journeys
+// ==========================================
+
+export async function loadUserJourneys(uid) {
+
+
+    const q = query(
+
+        journeysRef,
+
+        where(
+            "owner",
+            "==",
+            uid
+        ),
+
+        orderBy(
+            "createdAt",
+            "asc"
+        )
+
+    );
+
+
+    const snap =
+        await getDocs(q);
+
+
+
+    return snap.docs.map(doc => ({
+
+        id: doc.id,
+
+        ...doc.data()
+
+    }));
+
+}

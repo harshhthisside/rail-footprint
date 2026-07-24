@@ -3,403 +3,696 @@
 
 <head>
 
-    <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Rail Footprint</title>
+<title>Rail Footprint</title>
 
-    <!-- Leaflet -->
-    <link rel="stylesheet"
-          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
-    <!-- Google Fonts -->
-    <link rel="preconnect"
-          href="https://fonts.googleapis.com">
+<!-- Leaflet -->
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
-    <link rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossorigin>
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-          rel="stylesheet">
+<!-- Google Fonts -->
+<link rel="preconnect"
+href="https://fonts.googleapis.com">
 
-    <!-- Styles -->
-    <link rel="stylesheet"
-          href="assets/css/style.css">
+<link rel="preconnect"
+href="https://fonts.gstatic.com"
+crossorigin>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+rel="stylesheet">
+
+
+<!-- Styles -->
+<link rel="stylesheet"
+href="assets/css/style.css">
+
 
 </head>
 
+
 <body>
+
 
 <div id="sidebarOverlay"></div>
 
+
 <div id="app">
 
-    <!-- ===================================== -->
-    <!-- Mobile Menu -->
-    <!-- ===================================== -->
 
-    <button id="menuToggle">
-        ☰
-    </button>
+<button id="menuToggle">
+☰
+</button>
 
-    <!-- ===================================== -->
-    <!-- Sidebar -->
-    <!-- ===================================== -->
 
-    <aside id="sidebar">
 
-        <!-- ===================================== -->
-        <!-- Header -->
-        <!-- ===================================== -->
+<!-- =====================================
+SIDEBAR
+===================================== -->
 
-        <div class="sidebar-header">
 
-            <div class="brand">
+<aside id="sidebar">
 
-                <div class="brand-icon">
-                    🚆
-                </div>
 
-                <div class="brand-text">
 
-                    <h1>Rail Footprint</h1>
+<!-- BRAND -->
 
-                    <p>
-                        Visualize every railway journey across India.
-                    </p>
+<div class="sidebar-header">
 
-                </div>
+<div class="brand">
 
-            </div>
 
-        </div>
+<div class="brand-icon">
+🚆
+</div>
 
-       <!-- ===================================== -->
-<!-- User Card -->
-<!-- ===================================== -->
+
+<div class="brand-text">
+
+<h1>
+Rail Footprint
+</h1>
+
+
+<p>
+Visualize every railway journey across India.
+</p>
+
+
+</div>
+
+
+</div>
+
+</div>
+
+
+
+
+
+<!-- PROFILE -->
 
 <div class="profile-card">
 
-    <img
-        id="profileImage"
-        class="profile-avatar"
-        src="https://ui-avatars.com/api/?name=Guest&background=0f766e&color=fff"
-        alt="Profile">
 
-    <div class="profile-info">
+<img
+id="profileImage"
+class="profile-avatar"
+src="https://ui-avatars.com/api/?name=Guest"
+alt="Profile">
 
-        <h3 id="userName">
-            Guest
-        </h3>
 
-        <div class="profile-role">
-            Rail Explorer
-        </div>
 
-        <div id="userStatus" class="profile-status offline">
+<div class="profile-info">
 
-            <span class="status-dot"></span>
 
-            Not signed in
+<h3 id="userName">
+Guest
+</h3>
 
-        </div>
 
-    </div>
+<div class="profile-role">
+Rail Explorer
+</div>
+
+
+
+<div id="userStatus"
+class="profile-status offline">
+
+
+<span class="status-dot"></span>
+
+Not signed in
+
 
 </div>
 
-        <!-- ===================================== -->
-        <!-- Authentication -->
-        <!-- ===================================== -->
 
-        <div class="auth-card">
-
-            <button id="loginBtn">
-                Continue with Google
-            </button>
-
-            <button id="logoutBtn"
-                    style="display:none;">
-                Logout
-            </button>
-
-        </div>
-
-        <!-- ===================================== -->
-        <!-- Statistics -->
-        <!-- ===================================== -->
-
-        <h2 class="section-title">
-            Journey Statistics
-        </h2>
-
-        <section id="statistics">
-
-            <div class="stat-card">
-
-                <div>
-
-                    <span class="stat-icon">🚆</span>
-
-                    <span class="stat-label">
-                        Journeys
-                    </span>
-
-                </div>
-
-                <span id="statJourneys"
-                      class="stat-value">
-                    0
-                </span>
-
-            </div>
-
-            <div class="stat-card">
-
-                <div>
-
-                    <span class="stat-icon">📍</span>
-
-                    <span class="stat-label">
-                        Stations
-                    </span>
-
-                </div>
-
-                <span id="statStations"
-                      class="stat-value">
-                    0
-                </span>
-
-            </div>
-
-            <div class="stat-card">
-
-                <div>
-
-                    <span class="stat-icon">🛤</span>
-
-                    <span class="stat-label">
-                        Distance
-                    </span>
-
-                </div>
-
-                <span id="statDistance"
-                      class="stat-value">
-                    0 km
-                </span>
-
-            </div>
-
-            <div class="stat-card">
-
-                <div>
-
-                    <span class="stat-icon">🏆</span>
-
-                    <span class="stat-label">
-                        Longest
-                    </span>
-
-                </div>
-
-                <span id="statLongest"
-                      class="stat-value">
-                    -
-                </span>
-
-            </div>
-
-        </section>
-
-        <!-- ===================================== -->
-        <!-- Journey Planner -->
-        <!-- ===================================== -->
-         <!-- Journey Planner -->
-
-<h2 class="section-title">
-    Add Journey
-</h2>
-
-<div class="glass-card form">
-
-    <label for="originInput">
-        Origin Station
-    </label>
-
-    <input
-        id="originInput"
-        type="text"
-        placeholder="Search station">
-
-    <div id="originSuggestions"
-         class="suggestions"></div>
-
-    <button
-        id="addIntermediateBtn"
-        type="button">
-
-        ＋ Add Intermediate Station
-
-    </button>
-
-    <div id="intermediateContainer"
-         class="intermediate-container">
-    </div>
-
-    <label for="destinationInput">
-        Destination Station
-    </label>
-
-    <input
-        id="destinationInput"
-        type="text"
-        placeholder="Search station">
-
-    <div id="destinationSuggestions"
-         class="suggestions">
-    </div>
-
-    <button
-        id="addJourneyBtn"
-        type="button">
-
-        🚆 Add Journey
-
-    </button>
 
 </div>
 
-<!-- ===================================== -->
-<!-- Journey History -->
-<!-- ===================================== -->
+
+</div>
+
+
+
+
+
+
+<!-- AUTH -->
+
+<div class="auth-card">
+
+
+<button id="loginBtn">
+Continue with Google
+</button>
+
+
+<button id="logoutBtn"
+style="display:none;">
+
+Logout
+
+</button>
+
+
+</div>
+
+
+
+
+
+
+<!-- VIEWING OTHER USER -->
+
+<div id="viewingUserCard"
+class="viewing-user-card"
+style="display:none;">
+
+
+<div class="viewing-title">
+
+👤 Viewing Footprint
+
+</div>
+
+
+
+<h3 id="viewingUserName">
+
+User
+
+</h3>
+
+
+
+<button id="backToMyFootprint">
+
+← Back To My Footprint
+
+</button>
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<!-- STATISTICS -->
 
 <h2 class="section-title">
-    My Journeys
+
+Journey Statistics
+
 </h2>
 
-<section id="journeys">
 
-    <div id="journeyList"
-         class="journey-list">
-    </div>
+
+<section id="statistics">
+
+
+
+<div class="stat-card">
+
+<div>
+
+<span class="stat-icon">
+🚆
+</span>
+
+<span class="stat-label">
+Journeys
+</span>
+
+</div>
+
+
+<span id="statJourneys"
+class="stat-value">
+
+0
+
+</span>
+
+
+</div>
+
+
+
+
+
+<div class="stat-card">
+
+<div>
+
+<span class="stat-icon">
+📍
+</span>
+
+<span class="stat-label">
+Stations
+</span>
+
+</div>
+
+
+<span id="statStations"
+class="stat-value">
+
+0
+
+</span>
+
+
+</div>
+
+
+
+
+
+
+<div class="stat-card">
+
+
+<div>
+
+<span class="stat-icon">
+🛤
+</span>
+
+
+<span class="stat-label">
+Distance
+</span>
+
+
+</div>
+
+
+<span id="statDistance"
+class="stat-value">
+
+0 km
+
+</span>
+
+
+</div>
+
+
+
+
+
+
+
+<div class="stat-card">
+
+
+<div>
+
+
+<span class="stat-icon">
+🏆
+</span>
+
+
+<span class="stat-label">
+Longest
+</span>
+
+
+</div>
+
+
+<span id="statLongest"
+class="stat-value">
+
+-
+
+</span>
+
+
+</div>
+
+
 
 </section>
 
-</aside>
 
-<!-- ===================================== -->
-<!-- Map -->
-<!-- ===================================== -->
 
-<main id="mapContainer">
 
-    <!-- Loading -->
 
-    <div id="mapLoading">
 
-        <div class="loader"></div>
 
-        <div class="loading-text">
-            Preparing India's Railway Network...
-        </div>
 
-    </div>
 
-    <!-- Floating Search -->
 
-    <div id="mapSearch">
+<!-- ADD JOURNEY -->
 
-    <input
-        id="mapSearchInput"
-        type="text"
-        placeholder="🔍 Search station or journey">
 
-    <div
-        id="mapSearchSuggestions"
-        class="suggestions">
-    </div>
+<h2 class="section-title">
+
+Add Journey
+
+</h2>
+
+
+
+
+<div class="glass-card form">
+
+
+
+<label>
+Origin Station
+</label>
+
+
+
+<input
+id="originInput"
+type="text"
+placeholder="Search station">
+
+
+
+<div id="originSuggestions"
+class="suggestions">
+</div>
+
+
+
+
+<button id="addIntermediateBtn"
+type="button">
+
+＋ Add Intermediate Station
+
+</button>
+
+
+
+
+<div id="intermediateContainer"
+class="intermediate-container">
 
 </div>
 
-    <!-- Floating Controls -->
 
-    <div id="floatingButtons">
 
-        <button
-            id="locateBtn"
-            title="Locate Me">
 
-            📍
 
-        </button>
+<label>
 
-        <button
-            id="fitIndiaBtn"
-            title="India View">
+Destination Station
 
-            🇮🇳
+</label>
 
-        </button>
 
-        <button
-            id="themeBtn"
-            title="Toggle Theme">
 
-            🌙
 
-        </button>
+<input
+id="destinationInput"
+type="text"
+placeholder="Search station">
 
-    </div>
 
-    <!-- Floating Statistics -->
 
-    <div id="floatingStats">
 
-        <div>
+<div id="destinationSuggestions"
+class="suggestions">
 
-            🚆
-            <span id="floatingJourneyCount">
-                0
-            </span>
+</div>
 
-        </div>
 
-        <div>
 
-            📍
-            <span id="floatingStationCount">
-                0
-            </span>
 
-        </div>
 
-    </div>
+<button id="addJourneyBtn"
+type="button">
 
-    <!-- Map -->
+🚆 Add Journey
 
-    <div id="map"></div>
-            </main>
+</button>
 
-    </div>
 
-    <!-- ===================================== -->
-    <!-- Leaflet -->
-    <!-- ===================================== -->
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</div>
 
-    <!-- ===================================== -->
-    <!-- Application -->
-    <!-- ===================================== -->
 
-    <script
-        type="module"
-        src="assets/js/app.js">
-    </script>
+
+
+
+
+
+
+
+
+<!-- MY JOURNEYS -->
+
+
+<h2 class="section-title">
+
+My Journeys
+
+</h2>
+
+
+
+
+<section id="journeys">
+
+
+<div id="journeyList"
+class="journey-list">
+
+</div>
+
+
+</section>
+
+
+
+
+
+
+
+
+
+<!-- COMMUNITY -->
+
+<h2 class="section-title">
+
+🌍 Explore Rail Footprints
+
+</h2>
+
+
+
+<section id="usersSection">
+
+
+<div id="userList"
+class="user-list">
+
+
+</div>
+
+
+</section>
+
+
+
+
+
+
+
+</aside>
+
+
+
+
+
+
+
+
+
+
+<!-- =====================================
+MAP
+===================================== -->
+
+
+<main id="mapContainer">
+
+
+
+<div id="mapLoading">
+
+
+<div class="loader"></div>
+
+
+<div class="loading-text">
+
+Preparing India's Railway Network...
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+<div id="mapSearch">
+
+
+<input
+id="mapSearchInput"
+type="text"
+placeholder="🔍 Search station or journey">
+
+
+
+<div id="mapSearchSuggestions"
+class="suggestions">
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+
+
+<div id="floatingButtons">
+
+
+<button id="locateBtn">
+
+📍
+
+</button>
+
+
+
+<button id="fitIndiaBtn">
+
+🇮🇳
+
+</button>
+
+
+
+<button id="themeBtn">
+
+🌙
+
+</button>
+
+
+
+</div>
+
+
+
+
+
+
+
+
+<div id="floatingStats">
+
+
+<div>
+
+🚆
+
+<span id="floatingJourneyCount">
+
+0
+
+</span>
+
+
+</div>
+
+
+
+
+<div>
+
+📍
+
+<span id="floatingStationCount">
+
+0
+
+</span>
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+<div id="map"></div>
+
+
+
+</main>
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<!-- Leaflet -->
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+
+
+
+<script type="module"
+src="assets/js/app.js">
+
+</script>
+
+
+
 
 </body>
 
