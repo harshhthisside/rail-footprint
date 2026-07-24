@@ -227,55 +227,75 @@ async function initializeApp() {
 
         initializeAuth(async (user) => {
 
-            const userName =
-                document.getElementById("userName");
+    const userName = document.getElementById("userName");
+    const profileImage = document.getElementById("profileImage");
+    const userStatus = document.getElementById("userStatus");
 
-            if (!loginBtn || !logoutBtn || !userName)
-                return;
+    if (!loginBtn || !logoutBtn || !userName)
+        return;
 
-            console.log("Auth State:", user);
+    if (user) {
 
-            if (user) {
+        console.log("Logged in:", user.displayName);
 
-                console.log("Logged in:", user.displayName);
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "inline-block";
 
-                loginBtn.style.display = "none";
-                logoutBtn.style.display = "inline-block";
+        userName.textContent =
+            user.displayName || "Rail Explorer";
 
-                userName.textContent =
-                    user.displayName;
+        // Google profile photo
+        profileImage.src =
+            user.photoURL ||
+            `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || "User")}&background=0f766e&color=fff`;
 
-                await renderJourneys();
-                await loadStatistics();
+        // Signed in badge
+        userStatus.className = "profile-status online";
 
-            }
-            else {
+userStatus.innerHTML = `
+    <span class="status-dot"></span>
+    Signed in
+`;
 
-                console.log("Logged out");
+        await renderJourneys();
+        await loadStatistics();
 
-                loginBtn.style.display = "inline-block";
-                logoutBtn.style.display = "none";
+    }
+    else {
 
-                userName.textContent = "Guest";
+        loginBtn.style.display = "inline-block";
+        logoutBtn.style.display = "none";
 
-                const journeyList =
-                    document.getElementById("journeyList");
+        userName.textContent = "Guest";
 
-                if (journeyList) {
+        profileImage.src =
+            "https://ui-avatars.com/api/?name=Guest&background=0f766e&color=fff";
 
-                    journeyList.innerHTML =
-                        "<p>Please sign in to view your journeys.</p>";
+        userStatus.className = "profile-status offline";
 
-                }
+userStatus.innerHTML = `
+    <span class="status-dot"></span>
+    Not signed in
+`;
 
-                document.getElementById("statJourneys").textContent = "0";
-                document.getElementById("statStations").textContent = "0";
-                document.getElementById("statDistance").textContent = "0 km";
-                document.getElementById("statLongest").textContent = "-";
+        const journeyList =
+            document.getElementById("journeyList");
 
-            }
+        if (journeyList) {
 
-        });
+            journeyList.innerHTML =
+                "<p>Please sign in to view your journeys.</p>";
+
+        }
+
+        document.getElementById("statJourneys").textContent = "0";
+        document.getElementById("statStations").textContent = "0";
+        document.getElementById("statDistance").textContent = "0 km";
+        document.getElementById("statLongest").textContent = "-";
+
+    }
+
+});
 
         // ==========================================
         // Auto Close Sidebar
