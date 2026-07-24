@@ -4,6 +4,9 @@
 // ==========================================
 
 import {
+    initializeMapSearch
+} from "./mapSearch.js";
+import {
     initializeMap,
     refreshMap
 } from "./map.js";
@@ -139,6 +142,8 @@ async function initializeApp() {
         // ==========================================
 
         await initializeStationSearch();
+
+        await initializeMapSearch();
 
         // ==========================================
         // Intermediate Stations

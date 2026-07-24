@@ -44,6 +44,16 @@ export async function initializeStationSearch() {
     attachStationSearch(originInput, originSuggestions);
     attachStationSearch(destinationInput, destinationSuggestions);
 
+    const mapSearchInput = document.getElementById("mapSearchInput");
+const mapSearchSuggestions = document.getElementById("mapSearchSuggestions");
+
+if (mapSearchInput && mapSearchSuggestions) {
+    attachStationSearch(
+        mapSearchInput,
+        mapSearchSuggestions
+    );
+}
+
     document.addEventListener("click", (e) => {
 
         if (

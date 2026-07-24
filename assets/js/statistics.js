@@ -5,6 +5,7 @@
 
 import { loadJourneys } from "./firestore.js";
 
+
 // ==========================================
 // Haversine Distance (km)
 // ==========================================
@@ -31,41 +32,70 @@ function haversine(lat1, lon1, lat2, lon2) {
 
 }
 
+
 // ==========================================
 // Load Statistics
 // ==========================================
 
 export async function loadStatistics() {
 
-    const journeys = await loadJourneys();
 
-    const stationSet = new Set();
+    const journeys =
+        await loadJourneys();
+
+
+    const stationSet =
+        new Set();
+
 
     let totalDistance = 0;
 
+
     let longestDistance = 0;
+
 
     let longestJourney = "-";
 
+
+
     for (const journey of journeys) {
 
+
         if (journey.origin)
-            stationSet.add(journey.origin.code);
+            stationSet.add(
+                journey.origin.code
+            );
+
 
         if (journey.destination)
-            stationSet.add(journey.destination.code);
+            stationSet.add(
+                journey.destination.code
+            );
 
-        (journey.intermediates || []).forEach(stop => {
 
-            stationSet.add(stop.code);
+
+        (journey.intermediates || [])
+        .forEach(stop => {
+
+            stationSet.add(
+                stop.code
+            );
 
         });
 
-        const route = journey.route || [];
+
+
+        const route =
+            journey.route || [];
+
+
 
         let distance = 0;
 
+
+
         for (let i = 1; i < route.length; i++) {
+
 
             distance += haversine(
 
@@ -77,31 +107,110 @@ export async function loadStatistics() {
 
             );
 
+
         }
+
+
 
         totalDistance += distance;
 
+
+
         if (distance > longestDistance) {
 
+
             longestDistance = distance;
+
 
             longestJourney =
                 `${journey.origin.code} → ${journey.destination.code}`;
 
+
         }
+
 
     }
 
-    document.getElementById("statJourneys").textContent =
-        journeys.length.toLocaleString();
 
-    document.getElementById("statStations").textContent =
-        stationSet.size.toLocaleString();
 
-    document.getElementById("statDistance").textContent =
-        `${Math.round(totalDistance).toLocaleString()} km`;
+    // ==========================================
+    // Sidebar Statistics
+    // ==========================================
 
-    document.getElementById("statLongest").textContent =
-        longestJourney;
+    const statJourneys =
+        document.getElementById("statJourneys");
+
+
+    const statStations =
+        document.getElementById("statStations");
+
+
+    const statDistance =
+        document.getElementById("statDistance");
+
+
+    const statLongest =
+        document.getElementById("statLongest");
+
+
+
+    if(statJourneys)
+
+        statJourneys.textContent =
+            journeys.length.toLocaleString();
+
+
+
+    if(statStations)
+
+        statStations.textContent =
+            stationSet.size.toLocaleString();
+
+
+
+    if(statDistance)
+
+        statDistance.textContent =
+            `${Math.round(totalDistance).toLocaleString()} km`;
+
+
+
+    if(statLongest)
+
+        statLongest.textContent =
+            longestJourney;
+
+
+
+
+    // ==========================================
+    // Floating Map Statistics
+    // ==========================================
+
+    const floatingJourneyCount =
+        document.getElementById(
+            "floatingJourneyCount"
+        );
+
+
+    const floatingStationCount =
+        document.getElementById(
+            "floatingStationCount"
+        );
+
+
+
+    if(floatingJourneyCount)
+
+        floatingJourneyCount.textContent =
+            journeys.length.toLocaleString();
+
+
+
+    if(floatingStationCount)
+
+        floatingStationCount.textContent =
+            stationSet.size.toLocaleString();
+
 
 }
