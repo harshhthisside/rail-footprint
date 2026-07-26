@@ -7,7 +7,8 @@ import {
     saveJourney,
     updateJourney,
     loadJourneys,
-    removeJourney
+    removeJourney,
+    deleteAllJourneys
 } from "./firestore.js";
 
 import {
@@ -35,6 +36,15 @@ loadMoreBtn.className = "load-more-journeys";
 loadMoreBtn.innerHTML =
     "🚆 Explore More Journeys";
 
+    const deleteAllBtn =
+    document.createElement("button");
+
+deleteAllBtn.className =
+    "delete-all-journeys";
+
+deleteAllBtn.innerHTML =
+    "🗑 Delete All Journeys";
+
 let initialized = false;
 
 let visibleJourneyCount = 8;
@@ -61,6 +71,51 @@ export function initializeJourneyManager() {
         visibleJourneyCount += 8;
 
         await renderJourneys();
+
+    }
+);
+
+deleteAllBtn.addEventListener(
+    "click",
+    async ()=>{
+
+        const confirmed = confirm(
+
+            "Delete ALL your journeys?\n\nThis action cannot be undone."
+
+        );
+
+        if(!confirmed)
+            return;
+
+        try{
+
+            const deleted =
+                await deleteAllJourneys();
+
+            console.log(
+                `Deleted ${deleted} journeys`
+            );
+
+            visibleJourneyCount = 8;
+
+            await renderJourneys();
+
+            await loadStatistics();
+
+            alert(
+                "All journeys deleted successfully."
+            );
+
+        }
+
+        catch(error){
+
+            console.error(error);
+
+            alert(error.message);
+
+        }
 
     }
 );
@@ -209,12 +264,15 @@ export async function renderJourneys() {
 
     if (!journeys.length) {
 
-        journeyList.innerHTML =
-            "<p>No journeys added yet.</p>";
+    journeyList.innerHTML =
+        "<p>No journeys added yet.</p>";
 
-        return;
+    return;
 
-    }
+}
+
+// Remove old Delete All button
+deleteAllBtn.remove();
 
 
     journeyList.innerHTML = "";
@@ -478,15 +536,24 @@ export async function renderJourneys() {
 
     // Add button AFTER all cards
 
-    if(
-        visibleJourneyCount < journeys.length
-    ){
+    // Show Load More
 
-        journeyList.appendChild(
-            loadMoreBtn
-        );
+if (
+    visibleJourneyCount < journeys.length
+) {
 
-    }
+    journeyList.appendChild(
+        loadMoreBtn
+    );
+
+}
+
+
+// Show Delete All button
+
+journeyList.appendChild(
+    deleteAllBtn
+);
 
 
 }

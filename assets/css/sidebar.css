@@ -1011,3 +1011,93 @@ input{
     }
 
 }
+/* ==========================================
+   DANGER ZONE
+========================================== */
+
+#dangerZone{
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:14px;
+
+    margin-top:12px;
+
+    margin-bottom:40px;
+
+}
+
+.danger-title{
+
+    color:#dc2626;
+
+}
+
+.danger-btn{
+
+    width:100%;
+
+    padding:15px;
+
+    border:none;
+
+    border-radius:16px;
+
+    cursor:pointer;
+
+    font-size:15px;
+
+    font-weight:700;
+
+    transition:.25s;
+
+    color:#fff;
+
+    background:#dc2626;
+
+    box-shadow:
+        0 10px 25px rgba(220,38,38,.25);
+
+}
+
+.danger-btn:hover{
+
+    transform:translateY(-2px);
+
+    background:#b91c1c;
+
+}
+
+.danger-outline{
+
+    background:transparent;
+
+    color:#dc2626;
+
+    border:2px solid #dc2626;
+
+    box-shadow:none;
+
+}
+
+.danger-outline:hover{
+
+    color:#fff;
+
+    background:#dc2626;
+
+}
+
+.danger-note{
+
+    margin:0;
+
+    font-size:12px;
+
+    line-height:1.6;
+
+    color:var(--text-secondary);
+
+}

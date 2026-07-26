@@ -333,3 +333,165 @@
     cursor:pointer;
 
 }
+/* ==========================================
+   Delete All Journeys
+========================================== */
+
+.delete-all-journeys{
+
+    width:100%;
+
+    margin-top:18px;
+
+    padding:14px 18px;
+
+    border:none;
+
+    border-radius:14px;
+
+    cursor:pointer;
+
+    font-size:.95rem;
+
+    font-weight:700;
+
+    color:#fff;
+
+    background:linear-gradient(
+        135deg,
+        #ef4444,
+        #dc2626
+    );
+
+    transition:.25s;
+
+    box-shadow:
+        0 10px 22px
+        rgba(220,38,38,.25);
+
+}
+
+.delete-all-journeys:hover{
+
+    transform:translateY(-2px);
+
+    box-shadow:
+        0 16px 32px
+        rgba(220,38,38,.35);
+
+}
+
+.delete-all-journeys:active{
+
+    transform:scale(.98);
+
+}
+
+body.dark .delete-all-journeys{
+
+    background:linear-gradient(
+        135deg,
+        #b91c1c,
+        #991b1b
+    );
+
+}
+/* ==========================================
+   Danger Zone
+========================================== */
+
+.danger-zone{
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:12px;
+
+    margin-top:14px;
+
+    margin-bottom:24px;
+
+}
+
+.danger-btn{
+
+    width:100%;
+
+    padding:14px;
+
+    border:none;
+
+    border-radius:14px;
+
+    cursor:pointer;
+
+    font-weight:700;
+
+    font-size:.95rem;
+
+    transition:.25s;
+
+}
+
+.danger-btn:hover{
+
+    transform:translateY(-2px);
+
+}
+
+.danger-btn:active{
+
+    transform:scale(.98);
+
+}
+
+/* Delete All */
+
+.danger-btn{
+
+    color:#fff;
+
+    background:linear-gradient(
+        135deg,
+        #ef4444,
+        #dc2626
+    );
+
+}
+
+/* Delete Account */
+
+.danger-outline{
+
+    background:transparent;
+
+    color:#ef4444;
+
+    border:2px solid #ef4444;
+
+}
+
+.danger-outline:hover{
+
+    background:#ef4444;
+
+    color:#fff;
+
+}
+
+body.dark .danger-outline{
+
+    color:#f87171;
+
+    border-color:#f87171;
+
+}
+
+body.dark .danger-outline:hover{
+
+    background:#f87171;
+
+    color:#111827;
+
+}

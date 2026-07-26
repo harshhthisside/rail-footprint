@@ -46,7 +46,8 @@ import {
 import {
     initializeAuth,
     login,
-    logout
+    logout,
+    deleteAccount
 } from "./auth.js";
 
 
@@ -133,16 +134,31 @@ async function initializeApp(){
         // ==========================================
 
 
-        loginBtn?.addEventListener(
-            "click",
-            login
-        );
+        // ==========================================
+// Login / Logout
+// ==========================================
 
+loginBtn?.addEventListener(
+    "click",
+    login
+);
 
-        logoutBtn?.addEventListener(
-            "click",
-            logout
-        );
+logoutBtn?.addEventListener(
+    "click",
+    logout
+);
+
+// Delete Account
+
+const deleteAccountBtn =
+    document.getElementById(
+        "deleteAccountBtn"
+    );
+
+deleteAccountBtn?.addEventListener(
+    "click",
+    deleteAccount
+);
 
 
 

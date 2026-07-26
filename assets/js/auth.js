@@ -12,7 +12,9 @@ import {
 import {
     signInWithPopup,
     signOut,
-    onAuthStateChanged
+    onAuthStateChanged,
+    deleteUser,
+    reauthenticateWithPopup
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 
 import {
@@ -20,6 +22,11 @@ import {
     setDoc,
     getDoc
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+
+import {
+    deleteAllJourneys,
+    deleteUserProfile
+} from "./firestore.js";
 
 
 let currentUser = null;
@@ -158,7 +165,117 @@ export async function logout() {
 
 }
 
+// ==========================================
+// Delete Account
+// ==========================================
 
+export async function deleteAccount() {
+
+    if (!auth.currentUser) {
+
+        throw new Error(
+            "Please sign in first."
+        );
+
+    }
+
+    const confirmed = confirm(
+
+        "Delete your Rail Footprint account permanently?\n\n" +
+
+        "This will permanently remove:\n\n" +
+
+        "• All journeys\n" +
+
+        "• Your profile\n" +
+
+        "• Your account\n\n" +
+
+        "This action cannot be undone."
+
+    );
+
+    if (!confirmed)
+        return;
+
+    try {
+
+        // Delete all journeys
+
+        await deleteAllJourneys();
+
+        // Delete profile
+
+        await deleteUserProfile();
+
+        // Delete Firebase Auth account
+
+        await deleteUser(
+            auth.currentUser
+        );
+
+        alert(
+            "Your account has been deleted successfully."
+        );
+
+    }
+
+    catch(error){
+
+        // Google requires recent login
+
+        if(
+            error.code ===
+            "auth/requires-recent-login"
+        ){
+
+            try{
+
+                await reauthenticateWithPopup(
+
+                    auth.currentUser,
+
+                    provider
+
+                );
+
+                await deleteAllJourneys();
+
+                await deleteUserProfile();
+
+                await deleteUser(
+                    auth.currentUser
+                );
+
+                alert(
+                    "Your account has been deleted successfully."
+                );
+
+            }
+
+            catch(err){
+
+                console.error(err);
+
+                alert(
+                    err.message
+                );
+
+            }
+
+            return;
+
+        }
+
+        console.error(error);
+
+        alert(
+            error.message
+        );
+
+    }
+
+}
 
 // ==========================================
 // Get Current User

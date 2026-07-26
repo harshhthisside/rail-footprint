@@ -17,8 +17,10 @@ import {
     where,
     orderBy,
     updateDoc,
-    getDoc
-} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+    getDoc,
+    writeBatch
+}
+from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
 // ==========================================
 
@@ -54,7 +56,6 @@ export async function loadJourneys() {
     if (!auth.currentUser)
         return [];
 
-
     const q = query(
 
         journeysRef,
@@ -72,9 +73,7 @@ export async function loadJourneys() {
 
     );
 
-
     const snap = await getDocs(q);
-
 
     return snap.docs.map(doc => ({
 
@@ -114,7 +113,7 @@ export async function updateJourney(id, journey) {
 }
 
 // ==========================================
-// Delete Journey
+// Delete Single Journey
 // ==========================================
 
 export async function removeJourney(id) {
@@ -135,12 +134,54 @@ export async function removeJourney(id) {
     await deleteDoc(ref);
 
 }
+
+// ==========================================
+// Delete All Journeys
+// ==========================================
+
+export async function deleteAllJourneys() {
+
+    if (!auth.currentUser)
+        throw new Error("Please sign in first.");
+
+    const q = query(
+
+        journeysRef,
+
+        where(
+            "owner",
+            "==",
+            auth.currentUser.uid
+        )
+
+    );
+
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty)
+        return 0;
+
+    const batch = writeBatch(db);
+
+    snapshot.forEach(docSnap => {
+
+        batch.delete(
+            docSnap.ref
+        );
+
+    });
+
+    await batch.commit();
+
+    return snapshot.size;
+
+}
+
 // ==========================================
 // Load All Users
 // ==========================================
 
 export async function loadUsers() {
-
 
     const usersRef =
         collection(
@@ -148,30 +189,26 @@ export async function loadUsers() {
             "users"
         );
 
-
     const snap =
         await getDocs(
             usersRef
         );
 
-
     return snap.docs.map(doc => ({
-
 
         id: doc.id,
 
         ...doc.data()
 
-
     }));
 
 }
+
 // ==========================================
 // Load Other User Journeys
 // ==========================================
 
 export async function loadUserJourneys(uid) {
-
 
     const q = query(
 
@@ -190,11 +227,8 @@ export async function loadUserJourneys(uid) {
 
     );
 
-
     const snap =
         await getDocs(q);
-
-
 
     return snap.docs.map(doc => ({
 
@@ -203,5 +237,33 @@ export async function loadUserJourneys(uid) {
         ...doc.data()
 
     }));
+
+}
+// ==========================================
+// Delete User Profile
+// ==========================================
+
+export async function deleteUserProfile() {
+
+    if (!auth.currentUser)
+        throw new Error("Please sign in first.");
+
+    const userRef = doc(
+
+        db,
+
+        "users",
+
+        auth.currentUser.uid
+
+    );
+
+    const snapshot =
+        await getDoc(userRef);
+
+    if (!snapshot.exists())
+        return;
+
+    await deleteDoc(userRef);
 
 }
