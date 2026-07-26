@@ -2,10 +2,13 @@
 // Firestore Journey Service
 // ==========================================
 
+
 import {
     db,
     auth
-} from "./firebase.js";
+}
+from "./firebase.js";
+
 
 import {
     collection,
@@ -22,166 +25,318 @@ import {
 }
 from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
+
+import {
+    deleteUser
+}
+from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+
+
 // ==========================================
 
-const journeysRef = collection(db, "journeys");
+const journeysRef =
+    collection(
+        db,
+        "journeys"
+    );
+
 
 // ==========================================
 // Save Journey
 // ==========================================
 
+
 export async function saveJourney(journey) {
 
+
     if (!auth.currentUser)
-        throw new Error("Please sign in first.");
 
-    await addDoc(journeysRef, {
+        throw new Error(
+            "Please sign in first."
+        );
 
-        owner: auth.currentUser.uid,
 
-        ...journey,
+    await addDoc(
 
-        createdAt: Date.now()
+        journeysRef,
 
-    });
+        {
+
+            owner:
+                auth.currentUser.uid,
+
+
+            ...journey,
+
+
+            createdAt:
+                Date.now()
+
+        }
+
+    );
 
 }
+
 
 // ==========================================
 // Load Current User Journeys
 // ==========================================
 
+
 export async function loadJourneys() {
 
+
     if (!auth.currentUser)
+
         return [];
 
-    const q = query(
 
-        journeysRef,
+    const q =
+        query(
 
-        where(
-            "owner",
-            "==",
-            auth.currentUser.uid
-        ),
+            journeysRef,
 
-        orderBy(
-            "createdAt",
-            "desc"
-        )
 
-    );
+            where(
+                "owner",
+                "==",
+                auth.currentUser.uid
+            ),
 
-    const snap = await getDocs(q);
+
+            orderBy(
+                "createdAt",
+                "desc"
+            )
+
+        );
+
+
+
+    const snap =
+        await getDocs(q);
+
+
 
     return snap.docs.map(doc => ({
 
-        id: doc.id,
+
+        id:
+            doc.id,
+
 
         ...doc.data()
+
 
     }));
 
 }
 
+
 // ==========================================
 // Update Journey
 // ==========================================
 
-export async function updateJourney(id, journey) {
+
+export async function updateJourney(
+    id,
+    journey
+) {
+
 
     if (!auth.currentUser)
-        throw new Error("Please sign in first.");
 
-    const ref = doc(db, "journeys", id);
+        throw new Error(
+            "Please sign in first."
+        );
 
-    const snapshot = await getDoc(ref);
+
+
+    const ref =
+        doc(
+            db,
+            "journeys",
+            id
+        );
+
+
+
+    const snapshot =
+        await getDoc(ref);
+
+
 
     if (!snapshot.exists())
-        throw new Error("Journey not found.");
 
-    if (snapshot.data().owner !== auth.currentUser.uid)
-        throw new Error("Permission denied.");
+        throw new Error(
+            "Journey not found."
+        );
 
-    await updateDoc(ref, {
 
-        ...journey
 
-    });
+    if (
+        snapshot.data().owner
+        !== auth.currentUser.uid
+    )
+
+        throw new Error(
+            "Permission denied."
+        );
+
+
+
+    await updateDoc(
+
+        ref,
+
+        {
+
+            ...journey
+
+        }
+
+    );
 
 }
+
 
 // ==========================================
 // Delete Single Journey
 // ==========================================
 
+
 export async function removeJourney(id) {
 
+
     if (!auth.currentUser)
-        throw new Error("Please sign in first.");
 
-    const ref = doc(db, "journeys", id);
+        throw new Error(
+            "Please sign in first."
+        );
 
-    const snapshot = await getDoc(ref);
+
+
+    const ref =
+        doc(
+            db,
+            "journeys",
+            id
+        );
+
+
+
+    const snapshot =
+        await getDoc(ref);
+
+
 
     if (!snapshot.exists())
-        throw new Error("Journey not found.");
 
-    if (snapshot.data().owner !== auth.currentUser.uid)
-        throw new Error("Permission denied.");
+        throw new Error(
+            "Journey not found."
+        );
+
+
+
+    if (
+        snapshot.data().owner
+        !== auth.currentUser.uid
+    )
+
+        throw new Error(
+            "Permission denied."
+        );
+
+
 
     await deleteDoc(ref);
 
 }
 
+
 // ==========================================
 // Delete All Journeys
 // ==========================================
 
+
 export async function deleteAllJourneys() {
 
+
     if (!auth.currentUser)
-        throw new Error("Please sign in first.");
 
-    const q = query(
-
-        journeysRef,
-
-        where(
-            "owner",
-            "==",
-            auth.currentUser.uid
-        )
-
-    );
-
-    const snapshot = await getDocs(q);
-
-    if (snapshot.empty)
-        return 0;
-
-    const batch = writeBatch(db);
-
-    snapshot.forEach(docSnap => {
-
-        batch.delete(
-            docSnap.ref
+        throw new Error(
+            "Please sign in first."
         );
 
-    });
+
+
+    const q =
+        query(
+
+            journeysRef,
+
+
+            where(
+
+                "owner",
+
+                "==",
+
+                auth.currentUser.uid
+
+            )
+
+        );
+
+
+
+    const snapshot =
+        await getDocs(q);
+
+
+
+    if (snapshot.empty)
+
+        return 0;
+
+
+
+    const batch =
+        writeBatch(db);
+
+
+
+    snapshot.forEach(
+        docSnap => {
+
+
+            batch.delete(
+                docSnap.ref
+            );
+
+
+        }
+    );
+
+
 
     await batch.commit();
+
+
 
     return snapshot.size;
 
 }
 
+
 // ==========================================
 // Load All Users
 // ==========================================
 
+
 export async function loadUsers() {
+
 
     const usersRef =
         collection(
@@ -189,81 +344,190 @@ export async function loadUsers() {
             "users"
         );
 
+
+
     const snap =
         await getDocs(
             usersRef
         );
 
+
+
     return snap.docs.map(doc => ({
 
-        id: doc.id,
+
+        id:
+            doc.id,
+
 
         ...doc.data()
+
 
     }));
 
 }
+
 
 // ==========================================
 // Load Other User Journeys
 // ==========================================
 
+
 export async function loadUserJourneys(uid) {
 
-    const q = query(
 
-        journeysRef,
+    const q =
+        query(
 
-        where(
-            "owner",
-            "==",
-            uid
-        ),
 
-        orderBy(
-            "createdAt",
-            "asc"
-        )
+            journeysRef,
 
-    );
+
+            where(
+
+                "owner",
+
+                "==",
+
+                uid
+
+            ),
+
+
+            orderBy(
+
+                "createdAt",
+
+                "asc"
+
+            )
+
+
+        );
+
+
 
     const snap =
         await getDocs(q);
 
+
+
     return snap.docs.map(doc => ({
 
-        id: doc.id,
+
+        id:
+            doc.id,
+
 
         ...doc.data()
+
 
     }));
 
 }
+
+
 // ==========================================
-// Delete User Profile
+// Delete Complete User Account
 // ==========================================
+
 
 export async function deleteUserProfile() {
 
+
     if (!auth.currentUser)
-        throw new Error("Please sign in first.");
 
-    const userRef = doc(
+        throw new Error(
+            "Please sign in first."
+        );
 
-        db,
 
-        "users",
 
-        auth.currentUser.uid
+    const user =
+        auth.currentUser;
 
-    );
 
-    const snapshot =
-        await getDoc(userRef);
 
-    if (!snapshot.exists())
-        return;
+    const uid =
+        user.uid;
 
-    await deleteDoc(userRef);
+
+
+    try {
+
+
+        // ----------------------------------
+        // 1. Delete all user journeys
+        // ----------------------------------
+
+        await deleteAllJourneys();
+
+
+
+        // ----------------------------------
+        // 2. Delete Firestore user profile
+        // ----------------------------------
+
+        const userRef =
+            doc(
+
+                db,
+
+                "users",
+
+                uid
+
+            );
+
+
+
+        const snapshot =
+            await getDoc(userRef);
+
+
+
+        if (snapshot.exists()) {
+
+
+            await deleteDoc(
+                userRef
+            );
+
+
+        }
+
+
+
+        // ----------------------------------
+        // 3. Delete Firebase Auth account
+        // ----------------------------------
+
+        await deleteUser(
+            user
+        );
+
+
+
+        console.log(
+            "Account deleted successfully"
+        );
+
+
+    }
+
+
+    catch(error) {
+
+
+        console.error(
+            "Account deletion failed:",
+            error
+        );
+
+
+        throw error;
+
+    }
+
 
 }
