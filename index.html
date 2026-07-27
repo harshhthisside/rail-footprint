@@ -315,6 +315,9 @@
 
             <!-- ========== STATIONS VIEW (placeholder) ========== -->
             <section id="view-stations" class="view">
+                <div class="page-back-bar mobile-only-back">
+                    <button type="button" class="page-back-btn" data-back-to="dashboard">← Back</button>
+                </div>
                 <div class="view-header">
                     <h2>Stations</h2>
                     <p>All stations you have visited</p>
@@ -326,6 +329,9 @@
 
             <!-- ========== ZONES VIEW (placeholder) ========== -->
             <section id="view-zones" class="view">
+                <div class="page-back-bar mobile-only-back">
+                    <button type="button" class="page-back-btn" data-back-to="dashboard">← Back</button>
+                </div>
                 <div class="view-header">
                     <h2>Zones Covered</h2>
                     <p>Indian Railways zones you have travelled through</p>
@@ -337,6 +343,9 @@
 
             <!-- ========== GALLERY VIEW (placeholder) ========== -->
             <section id="view-gallery" class="view">
+                <div class="page-back-bar mobile-only-back">
+                    <button type="button" class="page-back-btn" data-back-to="dashboard">← Back</button>
+                </div>
                 <div class="view-header">
                     <h2>Gallery</h2>
                     <p>Photos and memories from your rail journeys</p>
@@ -348,6 +357,9 @@
 
             <!-- ========== ACHIEVEMENTS VIEW (placeholder) ========== -->
             <section id="view-achievements" class="view">
+                <div class="page-back-bar mobile-only-back">
+                    <button type="button" class="page-back-btn" data-back-to="dashboard">← Back</button>
+                </div>
                 <div class="view-header">
                     <h2>Achievements</h2>
                     <p>Milestones and badges you have unlocked</p>
@@ -370,6 +382,9 @@
 
             <!-- ========== ANALYTICS VIEW ========== -->
             <section id="view-analytics" class="view">
+                <div class="page-back-bar">
+                    <button type="button" class="page-back-btn" data-back-to="dashboard">← Back to Dashboard</button>
+                </div>
                 <div class="view-header">
                     <h2>Analytics</h2>
                     <p>Detailed breakdown of your rail footprint</p>
@@ -487,110 +502,179 @@
         if (!full) return "Explorer";
         const cleaned = String(full).trim().replace(/\s+/g, " ");
         if (!cleaned || cleaned === "Guest") return "Explorer";
-        // First token only (works with normal + special unicode letters)
         return cleaned.split(" ")[0];
     }
 
     function updateGreeting() {
         const title = document.getElementById("greetingTitle");
         const nameEl = document.getElementById("userName");
-        let name = firstNameFrom(nameEl ? nameEl.textContent : "");
+        const name = firstNameFrom(nameEl ? nameEl.textContent : "");
         if (title) {
             title.innerHTML = `${getGreeting()}, <span id="greetingName">${name}</span>! 👋`;
         }
     }
 
-    // Expose so app.js can refresh greeting right after login
     window.updateGreeting = updateGreeting;
-
     updateGreeting();
     setInterval(updateGreeting, 60 * 1000);
 
-    // ---------- View switching ----------
-    document.querySelectorAll(".nav-item").forEach(item => {
-        item.addEventListener("click", (e) => {
-            e.preventDefault();
+    // ---------- Unified view switcher ----------
+    const VIEW_SUBTITLES = {
+        dashboard: "Let's continue your rail journey",
+        journeys: "Manage and add your journeys",
+        stations: "Explore the stations you've visited",
+        zones: "See which railway zones you've covered",
+        gallery: "Your rail memories",
+        achievements: "Your milestones and badges",
+        explore: "Discover other explorers",
+        analytics: "Detailed breakdown of your rail footprint",
+        settings: "Account and preferences"
+    };
 
-            document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
-            item.classList.add("active");
+    // Views without a sidebar nav item need a back target
+    const VIEW_BACK_TARGET = {
+        analytics: "dashboard"
+    };
 
-            const viewName = item.dataset.view;
-            document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
-            const target = document.getElementById("view-" + viewName);
-            if (target) target.classList.add("active");
+    let currentView = "dashboard";
+    let previousView = "dashboard";
 
-            const subtitle = document.getElementById("greetingSubtitle");
-            if (subtitle) {
-                const titles = {
-                    dashboard: "Let's continue your rail journey",
-                    journeys: "Manage and add your journeys",
-                    stations: "Explore the stations you've visited",
-                    zones: "See which railway zones you've covered",
-                    gallery: "Your rail memories",
-                    achievements: "Your milestones and badges",
-                    explore: "Discover other explorers",
-                    settings: "Account and preferences"
-                };
-                subtitle.textContent = titles[viewName] || "";
-            }
-
-            // When returning to dashboard, force map to recalculate size
-            // so the full network is visible and zoom works correctly
-            if (viewName === "dashboard") {
-                setTimeout(() => {
-                    if (window.map && typeof window.map.invalidateSize === "function") {
-                        window.map.invalidateSize(true);
-                    }
-                    // Also try the exported map if available via module later
-                    const mapEl = document.getElementById("map");
-                    if (mapEl && mapEl._leaflet_id) {
-                        // Leaflet stores instance; force a resize event
-                        window.dispatchEvent(new Event("resize"));
-                    }
-                }, 150);
-            }
-        });
-    });
-
-    // Mobile sidebar toggle
-    const menuBtn = document.getElementById("menuToggle");
-    const sidebar = document.getElementById("sidebar");
-    const overlay = document.getElementById("sidebarOverlay");
-    if (menuBtn && sidebar) {
-        menuBtn.addEventListener("click", () => {
-            sidebar.classList.toggle("open");
-            if (overlay) overlay.classList.toggle("open");
-        });
-        if (overlay) {
-            overlay.addEventListener("click", () => {
-                sidebar.classList.remove("open");
-                overlay.classList.remove("open");
-            });
+    function closeMobileSidebar() {
+        const sidebar = document.getElementById("sidebar");
+        const overlay = document.getElementById("sidebarOverlay");
+        sidebar?.classList.remove("open");
+        overlay?.classList.remove("open");
+        if (typeof window.closeSidebar === "function") {
+            window.closeSidebar();
         }
     }
 
-    // Keep map sized correctly on window resize
+    function switchView(viewName, options = {}) {
+        if (!viewName) return;
+
+        const target = document.getElementById("view-" + viewName);
+        if (!target) return;
+
+        if (!options.skipHistory) {
+            previousView = currentView;
+        }
+        currentView = viewName;
+
+        document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+        target.classList.add("active");
+
+        // Highlight matching nav item (or clear if none)
+        document.querySelectorAll(".nav-item").forEach(n => {
+            n.classList.toggle("active", n.dataset.view === viewName);
+        });
+
+        const subtitle = document.getElementById("greetingSubtitle");
+        if (subtitle) {
+            subtitle.textContent = VIEW_SUBTITLES[viewName] || "";
+        }
+
+        // Scroll view container to top
+        const viewsEl = document.getElementById("views");
+        if (viewsEl) viewsEl.scrollTop = 0;
+
+        // Close mobile drawer after navigation
+        if (window.innerWidth <= 768) {
+            closeMobileSidebar();
+        }
+
+        // Map needs a size recalculation when dashboard becomes visible
+        if (viewName === "dashboard") {
+            setTimeout(() => {
+                if (window.map && typeof window.map.invalidateSize === "function") {
+                    window.map.invalidateSize(true);
+                }
+                window.dispatchEvent(new Event("resize"));
+            }, 180);
+        }
+    }
+
+    window.switchView = switchView;
+
+    // Sidebar nav
+    document.querySelectorAll(".nav-item").forEach(item => {
+        item.addEventListener("click", (e) => {
+            e.preventDefault();
+            switchView(item.dataset.view);
+        });
+    });
+
+    // Analytics shortcut from dashboard
+    document.getElementById("viewAnalyticsBtn")?.addEventListener("click", () => {
+        switchView("analytics");
+    });
+
+    // Generic back buttons: data-back-to="dashboard" or omit to use previous/history
+    document.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-back-to], .page-back-btn");
+        if (!btn) return;
+        e.preventDefault();
+        const dest = btn.getAttribute("data-back-to")
+            || VIEW_BACK_TARGET[currentView]
+            || previousView
+            || "dashboard";
+        switchView(dest, { skipHistory: true });
+    });
+
+    // Mobile sidebar: only wire if app.js has not already (avoid double handlers)
+    // app.js owns menuToggle after module load; this is a safe fallback.
+    (function setupMobileMenuFallback() {
+        const menuBtn = document.getElementById("menuToggle");
+        const sidebar = document.getElementById("sidebar");
+        const overlay = document.getElementById("sidebarOverlay");
+        if (!menuBtn || !sidebar) return;
+
+        // Use a single delegated approach — mark so we don't double-bind
+        if (menuBtn.dataset.bound === "1") return;
+        menuBtn.dataset.bound = "1";
+
+        menuBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const isOpen = sidebar.classList.contains("open");
+            if (isOpen) {
+                sidebar.classList.remove("open");
+                overlay?.classList.remove("open");
+            } else {
+                sidebar.classList.add("open");
+                overlay?.classList.add("open");
+            }
+            setTimeout(() => {
+                if (window.map && typeof window.map.invalidateSize === "function") {
+                    window.map.invalidateSize(true);
+                }
+            }, 320);
+        });
+
+        overlay?.addEventListener("click", () => {
+            sidebar.classList.remove("open");
+            overlay.classList.remove("open");
+        });
+
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+                sidebar.classList.remove("open");
+                overlay?.classList.remove("open");
+            }
+        });
+    })();
+
+    // Keep map sized correctly on window resize (debounced)
+    let resizeTimer = null;
     window.addEventListener("resize", () => {
-        setTimeout(() => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            if (window.innerWidth > 768) {
+                closeMobileSidebar();
+            }
             if (window.map && typeof window.map.invalidateSize === "function") {
                 window.map.invalidateSize(true);
             }
-        }, 100);
+        }, 120);
     });
-
-    // View Analytics button → switch to Analytics view
-    const analyticsBtn = document.getElementById("viewAnalyticsBtn");
-    if (analyticsBtn) {
-        analyticsBtn.addEventListener("click", () => {
-            document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
-            // no nav item for analytics; just show the view
-            document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
-            const av = document.getElementById("view-analytics");
-            if (av) av.classList.add("active");
-            const subtitle = document.getElementById("greetingSubtitle");
-            if (subtitle) subtitle.textContent = "Detailed breakdown of your rail footprint";
-        });
-    }
 </script>
 
 </body>

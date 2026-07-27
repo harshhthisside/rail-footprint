@@ -1,341 +1,509 @@
 /* =========================================================
-   LARGE TABLETS
+   RAIL FOOTPRINT — MOBILE & RESPONSIVE
+   Single source of truth for ≤768px (and smaller)
 ========================================================= */
 
-@media (max-width:1200px){
-
-    #sidebar{
-
-        width:360px;
-        min-width:360px;
-        max-width:360px;
-
+/* ---------- Large tablets: keep sidebar usable ---------- */
+@media (max-width: 1100px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
     }
-
+    .stats-column {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+    }
+    .overview-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
 /* =========================================================
-   TABLETS
+   MOBILE (≤768px)
 ========================================================= */
+@media (max-width: 768px) {
 
-@media (max-width:1024px){
-
-    #sidebar{
-
-        width:330px;
-        min-width:330px;
-        max-width:330px;
-
-        margin:12px;
-
+    html, body {
+        overflow: hidden;
+        height: 100%;
+        height: 100dvh;
+        overscroll-behavior: none;
+        -webkit-tap-highlight-color: transparent;
     }
 
+    #app {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        height: 100dvh;
+        overflow: hidden;
+    }
+
+    /* ---- Sidebar drawer ---- */
+    #sidebar {
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        width: min(88vw, 320px) !important;
+        min-width: unset !important;
+        max-width: 320px !important;
+        height: 100%;
+        height: 100dvh;
+        margin: 0 !important;
+        border-radius: 0 24px 24px 0;
+        transform: translateX(-105%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 2000;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 0;
+        box-shadow: none;
+    }
+
+    #sidebar.open {
+        transform: translateX(0);
+        box-shadow: 8px 0 40px rgba(0, 0, 0, 0.25);
+    }
+
+    /* ---- Overlay (class: open) ---- */
+    #sidebarOverlay {
+        display: block !important;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.5);
+        backdrop-filter: blur(3px);
+        -webkit-backdrop-filter: blur(3px);
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 0.3s, visibility 0.3s;
+        z-index: 1900;
+    }
+
+    #sidebarOverlay.open {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+
+    /* ---- Menu toggle ---- */
+    #menuToggle {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        width: 44px;
+        height: 44px;
+        border: none;
+        border-radius: 12px;
+        background: var(--card);
+        color: var(--text);
+        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.15);
+        font-size: 20px;
+        cursor: pointer;
+        z-index: 2100;
+        transition: transform 0.2s;
+    }
+
+    #menuToggle:active {
+        transform: scale(0.94);
+    }
+
+    /* ---- Main area ---- */
+    #main {
+        width: 100%;
+        min-width: 0;
+    }
+
+    #mainHeader {
+        height: auto;
+        min-height: 56px;
+        padding: 10px 12px 10px 60px !important;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .header-left h1 {
+        font-size: 15px !important;
+        line-height: 1.3;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: calc(100vw - 180px);
+    }
+
+    .header-left p {
+        font-size: 11px;
+        display: none; /* save space on small screens */
+    }
+
+    .header-right {
+        gap: 6px;
+        flex-shrink: 0;
+    }
+
+    .header-search input {
+        width: 0 !important;
+        min-width: 0;
+        padding-left: 36px;
+        padding-right: 10px;
+        opacity: 0;
+        pointer-events: none;
+        transition: width 0.25s, opacity 0.2s;
+    }
+
+    .header-search.expanded input,
+    .header-search:focus-within input {
+        width: min(180px, 42vw) !important;
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .header-search .suggestions,
+    .header-search .header-suggestions {
+        min-width: 220px;
+        left: auto;
+        right: 0;
+        max-height: 260px;
+    }
+
+    .header-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        font-size: 14px;
+    }
+
+    /* ---- Views scroll area ---- */
+    #views {
+        padding: 12px !important;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+
+    /* ---- Dashboard ---- */
+    .dashboard-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .stats-column {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px;
+    }
+
+    .stat-card.large {
+        padding: 14px;
+        border-radius: 16px;
+    }
+
+    .stat-value {
+        font-size: 20px !important;
+    }
+
+    .stat-label {
+        font-size: 11px;
+    }
+
+    .stat-icon-box {
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+        border-radius: 10px;
+    }
+
+    /* Map: fixed usable height on mobile — not full viewport */
+    .map-wrapper {
+        min-height: 280px !important;
+        height: min(52vh, 420px) !important;
+        border-radius: 16px;
+    }
+
+    #mapContainer {
+        min-height: 240px !important;
+        height: 100% !important;
+    }
+
+    #map {
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+    #floatingButtons {
+        top: 10px !important;
+        right: 10px !important;
+        gap: 8px !important;
+    }
+
+    #floatingButtons button {
+        width: 40px !important;
+        height: 40px !important;
+        border-radius: 12px !important;
+        font-size: 16px !important;
+    }
+
+    #floatingStats {
+        display: none !important;
+    }
+
+    .leaflet-control-zoom a {
+        width: 36px !important;
+        height: 36px !important;
+        line-height: 36px !important;
+        font-size: 16px !important;
+    }
+
+    .leaflet-bottom.leaflet-right .leaflet-control-zoom {
+        margin-bottom: 12px !important;
+        margin-right: 10px !important;
+    }
+
+    .map-header {
+        padding: 10px 14px;
+    }
+
+    .map-header h2 {
+        font-size: 14px;
+    }
+
+    /* Quick overview */
+    .overview-grid {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px;
+    }
+
+    .overview-card {
+        padding: 12px;
+        border-radius: 14px;
+        gap: 10px;
+    }
+
+    .overview-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+        border-radius: 12px;
+    }
+
+    .overview-value {
+        font-size: 16px !important;
+    }
+
+    .overview-label {
+        font-size: 11px;
+    }
+
+    .overview-header h2 {
+        font-size: 16px;
+    }
+
+    .view-analytics-btn {
+        font-size: 13px;
+    }
+
+    /* ---- Journey form / cards ---- */
+    .glass-card.form,
+    .form {
+        padding: 16px !important;
+        border-radius: 16px;
+    }
+
+    .form input,
+    .glass-card.form input {
+        height: 48px;
+        font-size: 16px; /* prevents iOS zoom on focus */
+    }
+
+    .journey-card {
+        padding: 14px !important;
+    }
+
+    .journey-actions {
+        flex-direction: column;
+    }
+
+    /* ---- Viewing banner ---- */
+    .viewing-banner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 12px 14px;
+    }
+
+    .back-footprint-btn,
+    .page-back-btn {
+        width: 100%;
+        text-align: center;
+    }
+
+    /* ---- User cards ---- */
+    .user-card {
+        padding: 14px;
+    }
+
+    /* ---- Analytics back bar ---- */
+    .page-back-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+
+    .page-back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 14px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        color: var(--text);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: var(--shadow-sm);
+        transition: 0.2s;
+    }
+
+    .page-back-btn:active {
+        transform: scale(0.97);
+    }
 }
 
 /* =========================================================
-   MOBILE
+   SMALL PHONES (≤480px)
 ========================================================= */
+@media (max-width: 480px) {
 
-@media (max-width:768px){
-
-    html,
-    body{
-
-        overflow:hidden;
-
+    #sidebar {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        border-radius: 0;
     }
 
-    #app{
-
-        position:relative;
-
+    .header-left h1 {
+        font-size: 14px !important;
+        max-width: calc(100vw - 160px);
     }
 
-    /* Sidebar Drawer */
-
-    #sidebar{
-
-        position:fixed;
-
-        top:0;
-        left:0;
-
-        width:88vw;
-        max-width:380px;
-        min-width:unset;
-
-        height:100vh;
-
-        margin:0;
-
-        border-radius:0 28px 28px 0;
-
-        transform:translateX(-110%);
-
-        transition:transform .35s ease;
-
-        z-index:2000;
-
-        overflow-y:auto;
-
-        padding:22px;
-
+    .stats-column {
+        grid-template-columns: 1fr 1fr !important;
     }
 
-    #sidebar.open{
-
-        transform:translateX(0);
-
+    .stat-value {
+        font-size: 18px !important;
     }
 
-    /* Overlay */
-
-    #sidebarOverlay{
-
-        position:fixed;
-
-        inset:0;
-
-        background:rgba(15,23,42,.45);
-
-        backdrop-filter:blur(4px);
-
-        opacity:0;
-
-        visibility:hidden;
-
-        transition:.3s;
-
-        z-index:1900;
-
+    .map-wrapper {
+        min-height: 240px !important;
+        height: min(48vh, 360px) !important;
     }
 
-    #sidebarOverlay.show{
-
-        opacity:1;
-
-        visibility:visible;
-
+    .overview-grid {
+        grid-template-columns: 1fr !important;
     }
 
-    /* Map */
-
-    #mapContainer{
-
-        width:100%;
-
-        height:100vh;
-
+    #views {
+        padding: 10px !important;
     }
 
-    #map{
-
-        width:100%;
-
-        height:100%;
-
+    .header-search:focus-within input,
+    .header-search.expanded input {
+        width: min(140px, 36vw) !important;
     }
-
-    /* Mobile Menu */
-
-    #menuToggle{
-
-        position:fixed;
-
-        top:18px;
-
-        left:18px;
-
-        width:52px;
-
-        height:52px;
-
-        border:none;
-
-        border-radius:16px;
-
-        background:var(--card);
-
-        color:var(--text);
-
-        box-shadow:0 12px 30px rgba(15,23,42,.18);
-
-        font-size:22px;
-
-        cursor:pointer;
-
-        z-index:2200;
-
-        transition:.3s;
-
-    }
-
-    #menuToggle:hover{
-
-        transform:scale(1.05);
-
-    }
-
-    /* Search */
-
-    #mapSearch{
-
-        width:calc(100% - 95px);
-
-        left:58%;
-
-        top:18px;
-
-    }
-
-    #mapSearch input{
-
-        height:52px;
-
-        font-size:14px;
-
-    }
-
-    /* Floating Buttons */
-
-    #floatingButtons{
-
-        top:88px;
-
-        right:15px;
-
-        gap:10px;
-
-    }
-
-    #floatingButtons button{
-
-        width:48px;
-
-        height:48px;
-
-        border-radius:16px;
-
-        font-size:19px;
-
-    }
-
-    /* Floating Stats */
-
-    #floatingStats{
-
-        display:none;
-
-    }
-
-    /* Zoom */
-
-    .leaflet-control-zoom{
-
-        margin-top:12px !important;
-
-        margin-right:15px !important;
-
-    }
-
 }
 
 /* =========================================================
-   SMALL PHONES
+   LANDSCAPE PHONES
 ========================================================= */
-
-@media (max-width:480px){
-
-    #sidebar{
-
-        width:100vw;
-
-        border-radius:0;
-
-        padding:20px;
-
+@media (max-height: 500px) and (max-width: 900px) {
+    .map-wrapper {
+        min-height: 200px !important;
+        height: 55vh !important;
     }
 
-    .brand-icon{
-
-        width:54px;
-
-        height:54px;
-
-        font-size:24px;
-
+    #mainHeader {
+        min-height: 48px;
+        padding-top: 6px !important;
+        padding-bottom: 6px !important;
     }
 
-    .brand-text h1{
-
-        font-size:24px;
-
+    .stats-column {
+        grid-template-columns: repeat(4, 1fr) !important;
     }
-
-    .profile-avatar{
-
-        width:52px;
-
-        height:52px;
-
-        font-size:18px;
-
-    }
-
-    #statistics{
-
-        grid-template-columns:1fr;
-
-    }
-
-    .stat-card{
-
-        min-height:90px;
-
-    }
-
-    .stat-value{
-
-        font-size:24px;
-
-    }
-
-    .form{
-
-        padding:18px;
-
-    }
-
-    #mapSearch{
-
-        width:calc(100% - 82px);
-
-    }
-
 }
 
 /* =========================================================
-   LANDSCAPE MOBILE
+   Desktop: hide mobile-only controls
 ========================================================= */
-
-@media (max-height:600px){
-
-    #sidebar{
-
-        padding:18px;
-
+@media (min-width: 769px) {
+    #menuToggle {
+        display: none !important;
     }
 
-    .profile-card{
+    #sidebarOverlay {
+        display: none !important;
+    }
+}
 
-        margin-bottom:18px;
+/* Page back button (all sizes) */
+.page-back-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+}
 
+.page-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.page-back-btn:hover {
+    background: var(--background);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+/* Optional mobile-only back bars on pages that already have sidebar nav */
+.mobile-only-back {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .mobile-only-back {
+        display: flex;
+    }
+}
+
+/* Reduce motion / lag on low-power devices */
+@media (max-width: 768px) {
+    .journey-card:hover,
+    .stat-card.large:hover,
+    .overview-card:hover,
+    .user-card:hover {
+        transform: none;
     }
 
-    .form{
-
-        margin-bottom:18px;
-
+    .journey-card,
+    .stat-card.large,
+    .overview-card,
+    .user-card,
+    .glass-card {
+        transition: box-shadow 0.2s ease;
     }
-
 }

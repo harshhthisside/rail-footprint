@@ -714,6 +714,11 @@ body.dark #sidebar {
     z-index: 25;
 }
 
+/* Unified open state (desktop hidden; mobile.css enables visibility) */
+#sidebarOverlay.open {
+    display: block;
+}
+
 /* ==========================================
    RESPONSIVE
 ========================================== */
@@ -732,50 +737,7 @@ body.dark #sidebar {
     }
 }
 
-@media (max-width: 768px) {
-    #sidebar {
-        position: fixed;
-        left: 0;
-        top: 0;
-        transform: translateX(-100%);
-        height: 100vh;
-        box-shadow: var(--shadow-lg);
-    }
-
-    #sidebar.open {
-        transform: translateX(0);
-    }
-
-    #menuToggle {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    #sidebarOverlay.open {
-        display: block;
-    }
-
-    .header-search input {
-        width: 160px;
-    }
-
-    .stats-column {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .overview-grid {
-        grid-template-columns: 1fr;
-    }
-
-    #views {
-        padding: 16px;
-    }
-
-    #mainHeader {
-        padding: 0 16px 0 64px;
-    }
-}
+/* Mobile rules live in mobile.css to avoid conflicts */
 
 /* ==========================================
    HEADER SEARCH — working dropdown
@@ -883,20 +845,7 @@ body.dark #sidebar {
     left: 16px;
 }
 
-@media (max-width: 768px) {
-    .map-wrapper {
-        height: calc(100vh - 280px);
-        min-height: 360px;
-    }
-    .header-search input {
-        width: 140px;
-    }
-    .header-search .suggestions {
-        min-width: 220px;
-        left: auto;
-        right: 0;
-    }
-}
+/* Mobile map/header rules live in mobile.css */
 
 /* ==========================================
    Zoom controls — always visible (bottom-right)
@@ -941,9 +890,4 @@ body.dark #sidebar {
     min-height: 460px;
 }
 
-@media (max-width: 768px) {
-    .map-wrapper {
-        min-height: 420px;
-        height: calc(100vh - 240px);
-    }
-}
+/* Mobile map height lives in mobile.css */

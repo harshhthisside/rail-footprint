@@ -320,89 +320,39 @@ deleteAccountBtn?.addEventListener(
 
         function openSidebar(){
 
-
-            sidebar?.classList.add(
-                "open"
-            );
-
-
-            overlay?.classList.add(
-                "show"
-            );
-
-
+            sidebar?.classList.add("open");
+            overlay?.classList.add("open");
             refreshMap();
 
         }
-
-
-
 
         function closeSidebar(){
 
-
-            sidebar?.classList.remove(
-                "open"
-            );
-
-
-            overlay?.classList.remove(
-                "show"
-            );
-
-
+            sidebar?.classList.remove("open");
+            overlay?.classList.remove("open");
             refreshMap();
 
         }
 
+        // Expose for inline nav script + other modules
+        window.openSidebar = openSidebar;
+        window.closeSidebar = closeSidebar;
 
-
-
-
-
-
-        menuToggle?.addEventListener(
-            "click",
-            ()=>{
-
-
-                if(
-                    sidebar?.classList.contains(
-                        "open"
-                    )
-                ){
-
+        // Bind only if inline script has not already wired the menu
+        if (menuToggle && menuToggle.dataset.bound !== "1") {
+            menuToggle.dataset.bound = "1";
+            menuToggle.addEventListener("click", () => {
+                if (sidebar?.classList.contains("open")) {
                     closeSidebar();
-
-                }
-                else{
-
+                } else {
                     openSidebar();
-
                 }
-
-
-            }
-        );
-
-
-
-        overlay?.addEventListener(
-            "click",
-            closeSidebar
-        );
-
-
-
-        document.addEventListener(
-            "keydown",
-            e=>{
-
-                if(e.key==="Escape")
-                    closeSidebar();
-
-            }
-        );
+            });
+            overlay?.addEventListener("click", closeSidebar);
+            document.addEventListener("keydown", e => {
+                if (e.key === "Escape") closeSidebar();
+            });
+        }
 
 
 

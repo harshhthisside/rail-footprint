@@ -232,13 +232,16 @@ async function openUserFootprint(user) {
         );
 
         // Switch to Dashboard so the user sees the map + stats of this explorer
-        document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
-        const dashNav = document.querySelector('.nav-item[data-view="dashboard"]');
-        if (dashNav) dashNav.classList.add("active");
-
-        document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
-        const dashView = document.getElementById("view-dashboard");
-        if (dashView) dashView.classList.add("active");
+        if (typeof window.switchView === "function") {
+            window.switchView("dashboard");
+        } else {
+            document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+            const dashNav = document.querySelector('.nav-item[data-view="dashboard"]');
+            if (dashNav) dashNav.classList.add("active");
+            document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+            const dashView = document.getElementById("view-dashboard");
+            if (dashView) dashView.classList.add("active");
+        }
 
         // Show viewing banner on dashboard
         const banner = document.getElementById("viewingBanner");
@@ -340,12 +343,16 @@ async function returnToMyFootprint() {
     updateStatistics(journeys);
 
     // Stay on / go to Dashboard
-    document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
-    const dashNav = document.querySelector('.nav-item[data-view="dashboard"]');
-    if (dashNav) dashNav.classList.add("active");
-    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
-    const dashView = document.getElementById("view-dashboard");
-    if (dashView) dashView.classList.add("active");
+    if (typeof window.switchView === "function") {
+        window.switchView("dashboard");
+    } else {
+        document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+        const dashNav = document.querySelector('.nav-item[data-view="dashboard"]');
+        if (dashNav) dashNav.classList.add("active");
+        document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+        const dashView = document.getElementById("view-dashboard");
+        if (dashView) dashView.classList.add("active");
+    }
 
     setTimeout(() => {
         if (window.map && typeof window.map.invalidateSize === "function") {
