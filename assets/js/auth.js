@@ -122,19 +122,21 @@ export async function login() {
     }
     catch (error) {
 
+        // User closed / cancelled the Google popup — not a real error
+        if (
+            error?.code === "auth/popup-closed-by-user" ||
+            error?.code === "auth/cancelled-popup-request"
+        ) {
+            console.log("Sign-in cancelled by user");
+            return;
+        }
 
         console.error(error);
-
-
-        alert(
-            error.message
-        );
-
+        alert(error.message);
 
     }
 
 }
-
 
 
 // ==========================================

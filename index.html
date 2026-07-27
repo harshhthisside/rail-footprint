@@ -2,36 +2,20 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
-
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rail Footprint</title>
 
     <!-- Leaflet -->
-
-    <link rel="stylesheet"
-          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
     <!-- Google Fonts -->
-
-    <link rel="preconnect"
-          href="https://fonts.googleapis.com">
-
-    <link rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossorigin>
-
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-          rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Styles -->
-
-    <link rel="stylesheet"
-          href="assets/css/style.css">
-
+    <link rel="stylesheet" href="assets/css/style.css">
 </head>
 
 <body>
@@ -40,474 +24,574 @@
 
 <div id="app">
 
-    <!-- Mobile Menu -->
-
-    <button id="menuToggle">
-        ☰
-    </button>
+    <!-- Mobile Menu Toggle -->
+    <button id="menuToggle">☰</button>
 
     <!-- =====================================
-         SIDEBAR
+         SIDEBAR (Narrow Gradient Nav)
     ====================================== -->
-
     <aside id="sidebar">
 
-        <!-- BRAND -->
-
-        <div class="sidebar-header">
-
-            <div class="brand">
-
-                <div class="brand-icon">
-                    🚆
-                </div>
-
-                <div class="brand-text">
-
-                    <h1>
-                        Rail Footprint
-                    </h1>
-
-                    <p>
-                        Visualize every railway journey across India.
-                    </p>
-
-                </div>
-
+        <!-- Brand -->
+        <div class="sidebar-brand">
+            <div class="brand-icon">🚆</div>
+            <div class="brand-text">
+                <h1>Rail Footprint</h1>
             </div>
-
         </div>
 
-        <!-- PROFILE -->
+        <!-- Navigation -->
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" data-view="dashboard">
+                <span class="nav-icon">🏠</span>
+                <span>Dashboard</span>
+            </a>
+            <a href="#" class="nav-item" data-view="journeys">
+                <span class="nav-icon">🚆</span>
+                <span>Journeys</span>
+            </a>
+            <a href="#" class="nav-item" data-view="stations">
+                <span class="nav-icon">📍</span>
+                <span>Stations</span>
+            </a>
+            <a href="#" class="nav-item" data-view="zones">
+                <span class="nav-icon">🗺️</span>
+                <span>Zones Covered</span>
+            </a>
+            <a href="#" class="nav-item" data-view="gallery">
+                <span class="nav-icon">🖼️</span>
+                <span>Gallery</span>
+            </a>
+            <a href="#" class="nav-item" data-view="achievements">
+                <span class="nav-icon">🏆</span>
+                <span>Achievements</span>
+            </a>
+            <a href="#" class="nav-item" data-view="explore">
+                <span class="nav-icon">🌍</span>
+                <span>Explore</span>
+            </a>
+            <a href="#" class="nav-item" data-view="settings">
+                <span class="nav-icon">⚙️</span>
+                <span>Settings</span>
+            </a>
+        </nav>
 
-        <div class="profile-card">
-
-            <img
-                id="profileImage"
-                class="profile-avatar"
-                src="https://ui-avatars.com/api/?name=Guest"
-                alt="Profile">
-
-            <div class="profile-info">
-
-                <h3 id="userName">
-                    Guest
-                </h3>
-
-                <div class="profile-role">
-                    Rail Explorer
+        <!-- User Card (bottom) -->
+        <div class="sidebar-user">
+            <div class="profile-card">
+                <img id="profileImage"
+                     class="profile-avatar"
+                     src="https://ui-avatars.com/api/?name=Guest&background=2563eb&color=fff"
+                     alt="Profile">
+                <div class="profile-info">
+                    <h3 id="userName">Guest</h3>
+                    <div class="profile-role">Rail Explorer</div>
+                    <div id="userStatus" class="profile-status offline">
+                        <span class="status-dot"></span>
+                        Not signed in
+                    </div>
                 </div>
-
-                <div id="userStatus"
-                     class="profile-status offline">
-
-                    <span class="status-dot"></span>
-
-                    Not signed in
-
-                </div>
-
             </div>
 
+            <div class="auth-card">
+                <button id="loginBtn">Continue with Google</button>
+                <button id="logoutBtn" style="display:none;">Logout</button>
+            </div>
         </div>
-
-        <!-- AUTH -->
-
-        <div class="auth-card">
-
-            <button id="loginBtn">
-                Continue with Google
-            </button>
-
-            <button id="logoutBtn"
-                    style="display:none;">
-
-                Logout
-
-            </button>
-
-        </div>
-
-        <!-- VIEWING OTHER USER -->
-
-        <div id="viewingUserCard"
-             class="viewing-user-card"
-             style="display:none;">
-
-            <div class="viewing-title">
-
-                👤 Viewing Footprint
-
-            </div>
-
-            <h3 id="viewingUserName">
-
-                User
-
-            </h3>
-
-            <button id="backToMyFootprint">
-
-                ← Back To My Footprint
-
-            </button>
-
-        </div>
-
-        <!-- STATISTICS -->
-
-        <h2 class="section-title">
-
-            Journey Statistics
-
-        </h2>
-
-        <section id="statistics">
-
-            <div class="stat-card">
-
-                <div>
-
-                    <span class="stat-icon">
-                        🚆
-                    </span>
-
-                    <span class="stat-label">
-                        Journeys
-                    </span>
-
-                </div>
-
-                <span id="statJourneys"
-                      class="stat-value">
-
-                    0
-
-                </span>
-
-            </div>
-
-            <div class="stat-card">
-
-                <div>
-
-                    <span class="stat-icon">
-                        📍
-                    </span>
-
-                    <span class="stat-label">
-                        Stations
-                    </span>
-
-                </div>
-
-                <span id="statStations"
-                      class="stat-value">
-
-                    0
-
-                </span>
-
-            </div>
-
-            <div class="stat-card">
-
-                <div>
-
-                    <span class="stat-icon">
-                        🛤
-                    </span>
-
-                    <span class="stat-label">
-                        Distance
-                    </span>
-
-                </div>
-
-                <span id="statDistance"
-                      class="stat-value">
-
-                    0 km
-
-                </span>
-
-            </div>
-
-            <div class="stat-card">
-
-                <div>
-
-                    <span class="stat-icon">
-                        🏆
-                    </span>
-
-                    <span class="stat-label">
-                        Longest
-                    </span>
-
-                </div>
-
-                <span id="statLongest"
-                      class="stat-value">
-
-                    -
-
-                </span>
-
-            </div>
-
-        </section>
-                <!-- =====================================
-             ADD JOURNEY
-        ====================================== -->
-
-        <h2 class="section-title">
-
-            Add Journey
-
-        </h2>
-
-        <div class="glass-card form">
-
-            <label>
-                Origin Station
-            </label>
-
-            <input
-                id="originInput"
-                type="text"
-                placeholder="Search station">
-
-            <div id="originSuggestions"
-                 class="suggestions">
-            </div>
-
-            <button
-                id="addIntermediateBtn"
-                type="button">
-
-                ＋ Add Intermediate Station
-
-            </button>
-
-            <div id="intermediateContainer"
-                 class="intermediate-container">
-
-            </div>
-
-            <label>
-
-                Destination Station
-
-            </label>
-
-            <input
-                id="destinationInput"
-                type="text"
-                placeholder="Search station">
-
-            <div id="destinationSuggestions"
-                 class="suggestions">
-
-            </div>
-
-            <button
-                id="addJourneyBtn"
-                type="button">
-
-                🚆 Add Journey
-
-            </button>
-
-        </div>
-
-        <!-- =====================================
-             MY JOURNEYS
-        ====================================== -->
-
-        <h2 class="section-title">
-
-            My Journeys
-
-        </h2>
-
-        <section id="journeys">
-
-            <div
-                id="journeyList"
-                class="journey-list">
-
-            </div>
-
-        </section>
-
-        <!-- =====================================
-             DANGER ZONE
-        ====================================== -->
-
-        <h2 class="section-title danger-title">
-
-            Account Setting
-
-        </h2>
-
-        <section id="dangerZone">
-
-            <button
-                id="deleteAccountBtn"
-                class="danger-btn danger-outline">
-
-                ❌ Delete My Account
-
-            </button>
-
-            <p class="danger-note">
-
-                These actions are permanent and cannot be undone.
-
-            </p>
-
-        </section>
-
-        <!-- =====================================
-             COMMUNITY
-        ====================================== -->
-
-        <h2 class="section-title">
-
-            🌍 Explore Rail Footprints
-
-        </h2>
-                <section id="usersSection">
-
-            <div
-                id="userList"
-                class="user-list">
-
-            </div>
-
-        </section>
 
     </aside>
 
     <!-- =====================================
-         MAP
+         MAIN CONTENT
     ====================================== -->
+    <div id="main">
 
-    <main id="mapContainer">
-
-        <!-- Loading -->
-
-        <div id="mapLoading">
-
-            <div class="loader"></div>
-
-            <div class="loading-text">
-
-                Preparing India's Railway Network...
-
+        <!-- Header -->
+        <header id="mainHeader">
+            <div class="header-left">
+                <h1 id="greetingTitle">Good morning, <span id="greetingName">Harsh</span>! 👋</h1>
+                <p id="greetingSubtitle">Let's continue your rail journey</p>
             </div>
 
-        </div>
-
-        <!-- Search -->
-
-        <div id="mapSearch">
-
-            <input
-                id="mapSearchInput"
-                type="text"
-                placeholder="🔍 Search station or journey">
-
-            <div
-                id="mapSearchSuggestions"
-                class="suggestions">
-
+            <div class="header-right">
+                <div class="header-search">
+                    <input id="mapSearchInput"
+                           type="text"
+                           placeholder="Search station or journey...">
+                    <div id="mapSearchSuggestions" class="suggestions"></div>
+                </div>
+                <button id="themeBtn" class="header-btn" title="Toggle theme">🌙</button>
+                <button id="notificationBtn" class="header-btn" title="Notifications">
+                    🔔
+                    <span class="notif-dot"></span>
+                </button>
             </div>
+        </header>
 
-        </div>
+        <!-- Views Container -->
+        <div id="views">
 
-        <!-- Floating Buttons -->
+            <!-- ========== DASHBOARD VIEW ========== -->
+            <section id="view-dashboard" class="view active">
 
-        <div id="floatingButtons">
+                <!-- Banner when viewing another user's footprint -->
+                <div id="viewingBanner" class="viewing-banner" style="display:none;">
+                    <div>
+                        <strong>👤 Viewing <span id="viewingBannerName">User</span>'s Footprint</strong>
+                        <span style="opacity:.8;font-size:13px;margin-left:8px;">Map & stats of this explorer</span>
+                    </div>
+                    <button id="backToMyFootprintDash" class="back-footprint-btn">← Back To My Footprint</button>
+                </div>
 
-            <button
-                id="locateBtn">
+                <div class="dashboard-grid">
 
-                📍
+                    <!-- Left Stats Column -->
+                    <div class="stats-column">
 
-            </button>
+                        <div class="stat-card large">
+                            <div class="stat-top">
+                                <div>
+                                    <div id="statJourneys" class="stat-value">0</div>
+                                    <div class="stat-label">Total Journeys</div>
+                                </div>
+                                <div class="stat-icon-box blue">📈</div>
+                            </div>
+                        </div>
 
-            <button
-                id="fitIndiaBtn">
+                        <div class="stat-card large">
+                            <div class="stat-top">
+                                <div>
+                                    <div id="statStations" class="stat-value">0</div>
+                                    <div class="stat-label">Stations Visited</div>
+                                </div>
+                                <div class="stat-icon-box rose">📍</div>
+                            </div>
+                        </div>
 
-                🇮🇳
+                        <div class="stat-card large">
+                            <div class="stat-top">
+                                <div>
+                                    <div id="statDistance" class="stat-value">0 km</div>
+                                    <div class="stat-label">Distance Covered</div>
+                                </div>
+                                <div class="stat-icon-box emerald">🚆</div>
+                            </div>
+                        </div>
 
-            </button>
+                        <div class="stat-card large">
+                            <div class="stat-top">
+                                <div>
+                                    <div id="statLongest" class="stat-value">—</div>
+                                    <div class="stat-label">Longest Journey</div>
+                                    <div id="statLongestMeta" class="stat-meta"></div>
+                                </div>
+                                <div class="stat-icon-box amber">🏆</div>
+                            </div>
+                        </div>
 
-            <button
-                id="themeBtn">
+                    </div>
 
-                🌙
+                    <!-- Map -->
+                    <div class="map-wrapper">
+                        <div class="map-header">
+                            <h2>Your Journey Map</h2>
+                            <button id="mapFiltersBtn" class="map-filter-btn">Filters</button>
+                        </div>
 
-            </button>
+                        <div id="mapContainer">
+                            <div id="mapLoading">
+                                <div class="loader"></div>
+                                <div class="loading-text">Preparing India's Railway Network...</div>
+                            </div>
 
-        </div>
+                            <div id="floatingButtons">
+                                <button id="locateBtn" title="My location">📍</button>
+                                <button id="fitIndiaBtn" title="Fit India">🇮🇳</button>
+                            </div>
 
-        <!-- Floating Statistics -->
+                            <div id="floatingStats">
+                                <div>🚆 <span id="floatingJourneyCount">0</span></div>
+                                <div>📍 <span id="floatingStationCount">0</span></div>
+                            </div>
 
-        <div id="floatingStats">
+                            <div id="map"></div>
+                        </div>
+                    </div>
 
-            <div>
+                </div>
 
-                🚆
+                <!-- Quick Overview -->
+                <div class="quick-overview">
+                    <div class="overview-header">
+                        <h2>Quick Overview</h2>
+                        <button id="viewAnalyticsBtn" class="view-analytics-btn">View Analytics →</button>
+                    </div>
 
-                <span id="floatingJourneyCount">
+                    <div class="overview-grid">
+                        <div class="overview-card">
+                            <div class="overview-icon blue">🇮🇳</div>
+                            <div>
+                                <div class="overview-value"><span id="statStates">18</span> <span class="muted">/ 28</span></div>
+                                <div class="overview-label">States Covered</div>
+                            </div>
+                        </div>
 
-                    0
+                        <div class="overview-card">
+                            <div class="overview-icon violet">🗺️</div>
+                            <div>
+                                <div class="overview-value"><span id="statZones">15</span> <span class="muted">/ 18</span></div>
+                                <div class="overview-label">Zones Covered</div>
+                            </div>
+                        </div>
 
-                </span>
+                        <div class="overview-card">
+                            <div class="overview-icon emerald">🛤️</div>
+                            <div>
+                                <div class="overview-value"><span id="statNetwork">62</span>%</div>
+                                <div class="overview-label">Network Explored</div>
+                            </div>
+                        </div>
 
-            </div>
+                        <div class="overview-card">
+                            <div class="overview-icon amber">⏱️</div>
+                            <div>
+                                <div class="overview-value"><span id="statTravelTime">742h 18m</span></div>
+                                <div class="overview-label">Total Travel Time</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-            <div>
+            </section>
 
-                📍
+            <!-- ========== JOURNEYS VIEW ========== -->
+            <section id="view-journeys" class="view">
 
-                <span id="floatingStationCount">
+                <div class="view-header">
+                    <h2>My Journeys</h2>
+                    <p>Add new journeys and manage your travel history</p>
+                </div>
 
-                    0
+                <!-- Viewing other user -->
+                <div id="viewingUserCard" class="viewing-user-card" style="display:none;">
+                    <div class="viewing-title">👤 Viewing Footprint</div>
+                    <h3 id="viewingUserName">User</h3>
+                    <button id="backToMyFootprint">← Back To My Footprint</button>
+                </div>
 
-                </span>
+                <!-- Add Journey Form -->
+                <div class="glass-card form">
+                    <h3 style="margin:0 0 16px; font-size:18px;">Add Journey</h3>
 
-            </div>
+                    <label>Origin Station</label>
+                    <input id="originInput" type="text" placeholder="Search station">
+                    <div id="originSuggestions" class="suggestions"></div>
 
-        </div>
+                    <button id="addIntermediateBtn" type="button">＋ Add Intermediate Station</button>
+                    <div id="intermediateContainer" class="intermediate-container"></div>
 
-        <!-- Leaflet Map -->
+                    <label>Destination Station</label>
+                    <input id="destinationInput" type="text" placeholder="Search station">
+                    <div id="destinationSuggestions" class="suggestions"></div>
 
-        <div id="map"></div>
+                    <label style="margin-top:16px;">Travel Time <span style="font-weight:400;color:var(--text-secondary);">(optional)</span></label>
+                    <div style="display:flex;gap:10px;align-items:center;">
+                        <input id="durationHours" type="number" min="0" max="99" placeholder="Hours" style="flex:1;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--background);color:var(--text);font-size:14px;box-sizing:border-box;">
+                        <span style="color:var(--text-secondary);font-size:13px;">h</span>
+                        <input id="durationMinutes" type="number" min="0" max="59" placeholder="Minutes" style="flex:1;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--background);color:var(--text);font-size:14px;box-sizing:border-box;">
+                        <span style="color:var(--text-secondary);font-size:13px;">m</span>
+                    </div>
+                    <p style="margin:6px 0 0;font-size:12px;color:var(--text-secondary);">Leave blank to auto-estimate from distance.</p>
 
-    </main>
+                    <button id="addJourneyBtn" type="button">🚆 Add Journey</button>
+                </div>
 
-</div>
+                <!-- Journey List -->
+                <section id="journeys" style="margin-top:28px;">
+                    <div id="journeyList" class="journey-list"></div>
+                </section>
 
-<!-- =====================================
-     LEAFLET
-===================================== -->
+            </section>
 
+            <!-- ========== STATIONS VIEW (placeholder) ========== -->
+            <section id="view-stations" class="view">
+                <div class="view-header">
+                    <h2>Stations</h2>
+                    <p>All stations you have visited</p>
+                </div>
+                <div class="placeholder-card">
+                    <p>Stations list coming soon. This view will show every unique station from your journeys.</p>
+                </div>
+            </section>
+
+            <!-- ========== ZONES VIEW (placeholder) ========== -->
+            <section id="view-zones" class="view">
+                <div class="view-header">
+                    <h2>Zones Covered</h2>
+                    <p>Indian Railways zones you have travelled through</p>
+                </div>
+                <div class="placeholder-card">
+                    <p>Zones overview coming soon.</p>
+                </div>
+            </section>
+
+            <!-- ========== GALLERY VIEW (placeholder) ========== -->
+            <section id="view-gallery" class="view">
+                <div class="view-header">
+                    <h2>Gallery</h2>
+                    <p>Photos and memories from your rail journeys</p>
+                </div>
+                <div class="placeholder-card">
+                    <p>Gallery coming soon.</p>
+                </div>
+            </section>
+
+            <!-- ========== ACHIEVEMENTS VIEW (placeholder) ========== -->
+            <section id="view-achievements" class="view">
+                <div class="view-header">
+                    <h2>Achievements</h2>
+                    <p>Milestones and badges you have unlocked</p>
+                </div>
+                <div class="placeholder-card">
+                    <p>Achievements system coming soon.</p>
+                </div>
+            </section>
+
+            <!-- ========== EXPLORE VIEW ========== -->
+            <section id="view-explore" class="view">
+                <div class="view-header">
+                    <h2>🌍 Explore Rail Footprints</h2>
+                    <p>Discover other explorers' railway journeys</p>
+                </div>
+                <section id="usersSection">
+                    <div id="userList" class="user-list"></div>
+                </section>
+            </section>
+
+            <!-- ========== ANALYTICS VIEW ========== -->
+            <section id="view-analytics" class="view">
+                <div class="view-header">
+                    <h2>Analytics</h2>
+                    <p>Detailed breakdown of your rail footprint</p>
+                </div>
+                <div class="overview-grid" style="margin-bottom:24px;">
+                    <div class="overview-card">
+                        <div class="overview-icon blue">🚆</div>
+                        <div>
+                            <div class="overview-value" id="analyticsJourneys">0</div>
+                            <div class="overview-label">Total Journeys</div>
+                        </div>
+                    </div>
+                    <div class="overview-card">
+                        <div class="overview-icon rose">📍</div>
+                        <div>
+                            <div class="overview-value" id="analyticsStations">0</div>
+                            <div class="overview-label">Stations Visited</div>
+                        </div>
+                    </div>
+                    <div class="overview-card">
+                        <div class="overview-icon emerald">🛤</div>
+                        <div>
+                            <div class="overview-value" id="analyticsDistance">0 km</div>
+                            <div class="overview-label">Distance Covered</div>
+                        </div>
+                    </div>
+                    <div class="overview-card">
+                        <div class="overview-icon amber">⏱️</div>
+                        <div>
+                            <div class="overview-value" id="analyticsTravelTime">0h</div>
+                            <div class="overview-label">Total Travel Time</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="overview-grid">
+                    <div class="overview-card">
+                        <div class="overview-icon blue">🇮🇳</div>
+                        <div>
+                            <div class="overview-value"><span id="analyticsStates">0</span> <span class="muted">/ 28</span></div>
+                            <div class="overview-label">States Covered</div>
+                        </div>
+                    </div>
+                    <div class="overview-card">
+                        <div class="overview-icon violet">🗺️</div>
+                        <div>
+                            <div class="overview-value"><span id="analyticsZones">0</span> <span class="muted">/ 18</span></div>
+                            <div class="overview-label">Zones Covered</div>
+                        </div>
+                    </div>
+                    <div class="overview-card">
+                        <div class="overview-icon emerald">🛤️</div>
+                        <div>
+                            <div class="overview-value"><span id="analyticsNetwork">0</span>%</div>
+                            <div class="overview-label">Network Explored</div>
+                        </div>
+                    </div>
+                    <div class="overview-card">
+                        <div class="overview-icon amber">🏆</div>
+                        <div>
+                            <div class="overview-value" id="analyticsLongest">—</div>
+                            <div class="overview-label">Longest Journey</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========== SETTINGS VIEW ========== -->
+            <section id="view-settings" class="view">
+                <div class="view-header">
+                    <h2>Settings</h2>
+                    <p>Account and preferences</p>
+                </div>
+
+                <div class="glass-card" style="margin-bottom:24px;">
+                    <h3 style="margin:0 0 12px;">Theme</h3>
+                    <p style="color:var(--text-secondary); font-size:14px; margin:0 0 16px;">
+                        Switch between light and dark mode anytime using the moon button in the header.
+                    </p>
+                </div>
+
+                <div class="glass-card danger-zone">
+                    <h3 style="margin:0 0 12px; color:var(--danger);">Danger Zone</h3>
+                    <p class="danger-note">These actions are permanent and cannot be undone.</p>
+                    <button id="deleteAccountBtn" class="danger-btn danger-outline">
+                        ❌ Delete My Account
+                    </button>
+                </div>
+            </section>
+
+        </div><!-- /views -->
+
+    </div><!-- /main -->
+
+</div><!-- /app -->
+
+<!-- Leaflet -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-<!-- =====================================
-     APPLICATION
-===================================== -->
+<!-- Application -->
+<script type="module" src="assets/js/app.js"></script>
 
-<script
-    type="module"
-    src="assets/js/app.js">
+<!-- View switching + time-based greeting + map resize -->
+<script>
+    // ---------- Time-based greeting (first name only) ----------
+    function getGreeting() {
+        const h = new Date().getHours();
+        if (h < 5)  return "Good night";
+        if (h < 12) return "Good morning";
+        if (h < 17) return "Good afternoon";
+        if (h < 21) return "Good evening";
+        return "Good night";
+    }
 
+    function firstNameFrom(full) {
+        if (!full) return "Explorer";
+        const cleaned = String(full).trim().replace(/\s+/g, " ");
+        if (!cleaned || cleaned === "Guest") return "Explorer";
+        // First token only (works with normal + special unicode letters)
+        return cleaned.split(" ")[0];
+    }
+
+    function updateGreeting() {
+        const title = document.getElementById("greetingTitle");
+        const nameEl = document.getElementById("userName");
+        let name = firstNameFrom(nameEl ? nameEl.textContent : "");
+        if (title) {
+            title.innerHTML = `${getGreeting()}, <span id="greetingName">${name}</span>! 👋`;
+        }
+    }
+
+    // Expose so app.js can refresh greeting right after login
+    window.updateGreeting = updateGreeting;
+
+    updateGreeting();
+    setInterval(updateGreeting, 60 * 1000);
+
+    // ---------- View switching ----------
+    document.querySelectorAll(".nav-item").forEach(item => {
+        item.addEventListener("click", (e) => {
+            e.preventDefault();
+
+            document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+            item.classList.add("active");
+
+            const viewName = item.dataset.view;
+            document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+            const target = document.getElementById("view-" + viewName);
+            if (target) target.classList.add("active");
+
+            const subtitle = document.getElementById("greetingSubtitle");
+            if (subtitle) {
+                const titles = {
+                    dashboard: "Let's continue your rail journey",
+                    journeys: "Manage and add your journeys",
+                    stations: "Explore the stations you've visited",
+                    zones: "See which railway zones you've covered",
+                    gallery: "Your rail memories",
+                    achievements: "Your milestones and badges",
+                    explore: "Discover other explorers",
+                    settings: "Account and preferences"
+                };
+                subtitle.textContent = titles[viewName] || "";
+            }
+
+            // When returning to dashboard, force map to recalculate size
+            // so the full network is visible and zoom works correctly
+            if (viewName === "dashboard") {
+                setTimeout(() => {
+                    if (window.map && typeof window.map.invalidateSize === "function") {
+                        window.map.invalidateSize(true);
+                    }
+                    // Also try the exported map if available via module later
+                    const mapEl = document.getElementById("map");
+                    if (mapEl && mapEl._leaflet_id) {
+                        // Leaflet stores instance; force a resize event
+                        window.dispatchEvent(new Event("resize"));
+                    }
+                }, 150);
+            }
+        });
+    });
+
+    // Mobile sidebar toggle
+    const menuBtn = document.getElementById("menuToggle");
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("sidebarOverlay");
+    if (menuBtn && sidebar) {
+        menuBtn.addEventListener("click", () => {
+            sidebar.classList.toggle("open");
+            if (overlay) overlay.classList.toggle("open");
+        });
+        if (overlay) {
+            overlay.addEventListener("click", () => {
+                sidebar.classList.remove("open");
+                overlay.classList.remove("open");
+            });
+        }
+    }
+
+    // Keep map sized correctly on window resize
+    window.addEventListener("resize", () => {
+        setTimeout(() => {
+            if (window.map && typeof window.map.invalidateSize === "function") {
+                window.map.invalidateSize(true);
+            }
+        }, 100);
+    });
+
+    // View Analytics button → switch to Analytics view
+    const analyticsBtn = document.getElementById("viewAnalyticsBtn");
+    if (analyticsBtn) {
+        analyticsBtn.addEventListener("click", () => {
+            document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+            // no nav item for analytics; just show the view
+            document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+            const av = document.getElementById("view-analytics");
+            if (av) av.classList.add("active");
+            const subtitle = document.getElementById("greetingSubtitle");
+            if (subtitle) subtitle.textContent = "Detailed breakdown of your rail footprint";
+        });
+    }
 </script>
 
 </body>
-
 </html>

@@ -6,6 +6,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 
 import {
+    initializeFirestore,
     getFirestore
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
@@ -47,8 +48,19 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// Firestore
-export const db = getFirestore(app);
+// Firestore — force long-polling to avoid QUIC / WebChannel packet errors
+// (ERR_QUIC_PROTOCOL_ERROR on some networks / browsers)
+let db;
+try {
+    db = initializeFirestore(app, {
+        experimentalForceLongPolling: true,
+        experimentalAutoDetectLongPolling: true
+    });
+} catch (e) {
+    // Already initialized (hot reload) — fall back
+    db = getFirestore(app);
+}
+export { db };
 
 // Firebase Storage
 export const storage = getStorage(app);

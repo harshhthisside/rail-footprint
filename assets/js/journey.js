@@ -193,6 +193,13 @@ async function createJourney() {
 
     }
 
+    // Optional user-provided travel time
+    const hoursEl = document.getElementById("durationHours");
+    const minsEl = document.getElementById("durationMinutes");
+    const hours = hoursEl ? parseInt(hoursEl.value, 10) || 0 : 0;
+    const mins = minsEl ? parseInt(minsEl.value, 10) || 0 : 0;
+    const durationMinutes = (hours * 60) + mins; // 0 means "not provided"
+
     const journey = {
 
         origin: stops[0],
@@ -205,6 +212,8 @@ async function createJourney() {
      lat: point[0],
      lon: point[1]
       })),
+
+        durationMinutes: durationMinutes > 0 ? durationMinutes : null,
 
         createdAt: Date.now()
 
@@ -644,6 +653,11 @@ function resetJourneyForm() {
     destination.dataset.lon = "";
 
     clearIntermediateStations();
+
+    const hoursEl = document.getElementById("durationHours");
+    const minsEl = document.getElementById("durationMinutes");
+    if (hoursEl) hoursEl.value = "";
+    if (minsEl) minsEl.value = "";
 
     addJourneyBtn.innerHTML = "🚆 Add Journey";
 

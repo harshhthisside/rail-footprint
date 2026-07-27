@@ -486,6 +486,11 @@ deleteAccountBtn?.addEventListener(
                         user.displayName ||
                         "Rail Explorer";
 
+                    // Refresh header greeting with first name
+                    if (typeof window.updateGreeting === "function") {
+                        window.updateGreeting();
+                    }
+
 
 
 
@@ -576,6 +581,10 @@ deleteAccountBtn?.addEventListener(
 
                     userName.textContent =
                         "Guest";
+
+                    if (typeof window.updateGreeting === "function") {
+                        window.updateGreeting();
+                    }
 
 
 

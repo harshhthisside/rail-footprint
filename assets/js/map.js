@@ -70,32 +70,31 @@ export function initializeMap(){
 
         zoomSnap:0.25,
 
-        minZoom:5,
+        minZoom:4,
 
         maxZoom:18,
 
         maxBounds:INDIA_BOUNDS,
 
-        maxBoundsViscosity:1
+        maxBoundsViscosity:0.8
 
     });
+
+    // Expose for dashboard resize / invalidateSize / screenshots
+    window.map = map;
 
 
 
     map.setView(
-
-        [22.8,79.5],
-
-        5.7
-
+        [22.5, 82.0],
+        5.0
     );
 
 
 
+    // Bottom-right so zoom stays usable and not covered by floating buttons
     L.control.zoom({
-
-        position:"topright"
-
+        position: "bottomright"
     }).addTo(map);
 
 
@@ -134,6 +133,35 @@ export function initializeMap(){
         "🚆 Rail Footprint Map Initialized"
     );
 
+    // Wire floating controls (Fit India + Locate)
+    document.getElementById("fitIndiaBtn")?.addEventListener("click", () => {
+        // Prefer fitting all drawn journey routes (best for screenshots)
+        if (journeyLayers.size > 0) {
+            const group = L.featureGroup(
+                Array.from(journeyLayers.values()).map(l => l.main)
+            );
+            map.fitBounds(group.getBounds().pad(0.08), {
+                padding: [40, 40],
+                maxZoom: 6,
+                animate: true
+            });
+        } else {
+            map.fitBounds(INDIA_BOUNDS, { padding: [24, 24], maxZoom: 5.5, animate: true });
+        }
+    });
+
+    document.getElementById("locateBtn")?.addEventListener("click", () => {
+        if (!navigator.geolocation) {
+            alert("Geolocation is not supported by your browser.");
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                map.flyTo([pos.coords.latitude, pos.coords.longitude], 10, { duration: 1.2 });
+            },
+            () => alert("Unable to retrieve your location.")
+        );
+    });
 
 }
 
@@ -519,9 +547,9 @@ export function drawJourney(
 
             color,
 
-            weight:8,
+            weight:10,
 
-            opacity:0.12,
+            opacity:0.18,
 
             lineCap:"round",
 
@@ -547,9 +575,9 @@ export function drawJourney(
 
             color,
 
-            weight:4,
+            weight:5,
 
-            opacity:0.88,
+            opacity:0.92,
 
             lineCap:"round",
 
@@ -682,9 +710,9 @@ export function drawAllJourneys(journeys){
 
                     color,
 
-                    weight:8,
+                    weight:10,
 
-                    opacity:0.12,
+                    opacity:0.18,
 
                     lineCap:"round",
 
@@ -710,9 +738,9 @@ export function drawAllJourneys(journeys){
 
                     color,
 
-                    weight:4,
+                    weight:5,
 
-                    opacity:0.88,
+                    opacity:0.92,
 
                     lineCap:"round",
 
@@ -782,19 +810,12 @@ export function drawAllJourneys(journeys){
 
 
         map.fitBounds(
-
             bounds,
-
             {
-
-                padding:[80,80],
-
-                maxZoom:7,
-
-                animate:true
-
+                padding: [48, 48],
+                maxZoom: 6,
+                animate: true
             }
-
         );
 
 
@@ -803,17 +824,15 @@ export function drawAllJourneys(journeys){
     else{
 
 
-        map.setView(
-
-            [22.8,79.5],
-
-            5.7
-
-        );
+        map.setView([22.5, 82.0], 5.0);
 
 
     }
 
+    // Ensure map tiles + size are correct after drawing
+    setTimeout(() => {
+        if (map) map.invalidateSize(true);
+    }, 100);
 
 }
 
@@ -847,7 +866,7 @@ export function focusJourney(id){
 
         {
 
-            padding:[80,80],
+            padding: [30, 30],
 
             maxZoom:8,
 
@@ -1092,19 +1111,12 @@ export function drawUserFootprint(journeys){
 
 
         map.fitBounds(
-
             bounds,
-
             {
-
-                padding:[80,80],
-
-                maxZoom:7,
-
-                animate:true
-
+                padding: [48, 48],
+                maxZoom: 6,
+                animate: true
             }
-
         );
 
 

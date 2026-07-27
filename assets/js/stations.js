@@ -44,15 +44,8 @@ export async function initializeStationSearch() {
     attachStationSearch(originInput, originSuggestions);
     attachStationSearch(destinationInput, destinationSuggestions);
 
-    const mapSearchInput = document.getElementById("mapSearchInput");
-const mapSearchSuggestions = document.getElementById("mapSearchSuggestions");
-
-if (mapSearchInput && mapSearchSuggestions) {
-    attachStationSearch(
-        mapSearchInput,
-        mapSearchSuggestions
-    );
-}
+    // Header / map search is handled exclusively by mapSearch.js
+    // (do not attach here — avoids double handlers and slow re-queries)
 
     document.addEventListener("click", (e) => {
 

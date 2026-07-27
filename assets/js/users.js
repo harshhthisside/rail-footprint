@@ -231,6 +231,28 @@ async function openUserFootprint(user) {
             journeys
         );
 
+        // Switch to Dashboard so the user sees the map + stats of this explorer
+        document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+        const dashNav = document.querySelector('.nav-item[data-view="dashboard"]');
+        if (dashNav) dashNav.classList.add("active");
+
+        document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+        const dashView = document.getElementById("view-dashboard");
+        if (dashView) dashView.classList.add("active");
+
+        // Show viewing banner on dashboard
+        const banner = document.getElementById("viewingBanner");
+        const bannerName = document.getElementById("viewingBannerName");
+        if (banner) banner.style.display = "flex";
+        if (bannerName) bannerName.textContent = user.name || "Rail Explorer";
+
+        // Force map resize after view switch
+        setTimeout(() => {
+            if (window.map && typeof window.map.invalidateSize === "function") {
+                window.map.invalidateSize(true);
+            }
+        }, 200);
+
     }
 
     catch (error) {
@@ -290,76 +312,54 @@ function updateViewerCard(user) {
 // Back To My Footprint
 // ==========================================
 
-function setupBackButton() {
+async function returnToMyFootprint() {
 
-    const button =
-        document.getElementById(
-            "backToMyFootprint"
-        );
+    viewingUser = null;
+    viewingOtherUser = false;
 
-    button?.addEventListener(
-        "click",
-        async () => {
+    // Hide all viewing UI
+    const card = document.getElementById("viewingUserCard");
+    if (card) card.style.display = "none";
 
-            viewingUser = null;
+    const banner = document.getElementById("viewingBanner");
+    if (banner) banner.style.display = "none";
 
-            viewingOtherUser = false;
+    // Show Journey Planner again
+    const planner = document.querySelector(".form");
+    if (planner) planner.style.display = "block";
 
-            // Hide Viewer Card
+    // Restore own footprint on map
+    const journeys = await loadJourneys();
+    drawAllJourneys(journeys);
 
-            const card =
-                document.getElementById(
-                    "viewingUserCard"
-                );
+    // Restore own journey list
+    const journeyList = document.getElementById("journeyList");
+    if (journeyList) journeyList.innerHTML = "";
+    await renderJourneys();
 
-            if (card) {
+    updateStatistics(journeys);
 
-                card.style.display = "none";
+    // Stay on / go to Dashboard
+    document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+    const dashNav = document.querySelector('.nav-item[data-view="dashboard"]');
+    if (dashNav) dashNav.classList.add("active");
+    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+    const dashView = document.getElementById("view-dashboard");
+    if (dashView) dashView.classList.add("active");
 
-            }
-
-            // Show Journey Planner
-
-            const planner =
-                document.querySelector(".form");
-
-            if (planner) {
-
-                planner.style.display = "flex";
-
-            }
-
-            // Restore own footprint
-
-            const journeys =
-                await loadJourneys();
-
-            drawAllJourneys(
-                journeys
-            );
-
-            // Restore own journey history
-
-            const journeyList =
-                document.getElementById(
-                    "journeyList"
-                );
-
-            if (journeyList) {
-
-                journeyList.innerHTML = "";
-
-            }
-
-            await renderJourneys();
-
-            updateStatistics(
-                journeys
-            );
-
+    setTimeout(() => {
+        if (window.map && typeof window.map.invalidateSize === "function") {
+            window.map.invalidateSize(true);
         }
-    );
+    }, 200);
+}
 
+function setupBackButton() {
+    const button = document.getElementById("backToMyFootprint");
+    button?.addEventListener("click", returnToMyFootprint);
+
+    const dashBtn = document.getElementById("backToMyFootprintDash");
+    dashBtn?.addEventListener("click", returnToMyFootprint);
 }
 
 
@@ -378,22 +378,63 @@ function updateStatistics(journeys) {
     const values = {
 
         statJourneys:
-            stats.journeys,
+            stats.journeys.toLocaleString(),
 
         statStations:
-            stats.stations,
+            stats.stations.toLocaleString(),
 
         statDistance:
-            `${stats.distance} km`,
+            `${stats.distance.toLocaleString()} km`,
 
         statLongest:
             stats.longest,
 
+        statLongestMeta:
+            stats.longestMeta || "",
+
         floatingJourneyCount:
-            stats.journeys,
+            stats.journeys.toLocaleString(),
 
         floatingStationCount:
-            stats.stations
+            stats.stations.toLocaleString(),
+
+        // Quick Overview
+        statStates:
+            stats.states,
+
+        statZones:
+            stats.zones,
+
+        statNetwork:
+            stats.networkPercent,
+
+        statTravelTime:
+            stats.travelTime,
+
+        // Analytics page
+        analyticsJourneys:
+            stats.journeys.toLocaleString(),
+
+        analyticsStations:
+            stats.stations.toLocaleString(),
+
+        analyticsDistance:
+            `${stats.distance.toLocaleString()} km`,
+
+        analyticsTravelTime:
+            stats.travelTime,
+
+        analyticsStates:
+            stats.states,
+
+        analyticsZones:
+            stats.zones,
+
+        analyticsNetwork:
+            stats.networkPercent,
+
+        analyticsLongest:
+            stats.longest
 
     };
 
