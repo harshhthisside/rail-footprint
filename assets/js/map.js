@@ -1312,3 +1312,114 @@ function applyFilters() {
         } catch (_) {}
     });
 }
+
+
+// ==========================================
+// Journey Planner Map (right panel)
+// Lightweight second map — no full network layer
+// ==========================================
+
+let plannerMap = null;
+let plannerLayers = [];
+
+export function initPlannerMap() {
+    const el = document.getElementById("plannerMap");
+    if (!el || plannerMap) {
+        if (plannerMap) {
+            setTimeout(() => plannerMap.invalidateSize(true), 120);
+        }
+        return plannerMap;
+    }
+
+    plannerMap = L.map("plannerMap", {
+        zoomControl: true,
+        preferCanvas: true,
+        attributionControl: false,
+        minZoom: 4,
+        maxZoom: 16
+    });
+
+    L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+        { maxZoom: 18 }
+    ).addTo(plannerMap);
+
+    plannerMap.setView([22.0, 80.0], 4.8);
+    window.plannerMap = plannerMap;
+
+    return plannerMap;
+}
+
+function clearPlannerLayers() {
+    if (!plannerMap) return;
+    plannerLayers.forEach((l) => {
+        try { plannerMap.removeLayer(l); } catch (_) {}
+    });
+    plannerLayers = [];
+}
+
+export function clearPlannerPreview() {
+    clearPlannerLayers();
+}
+
+export function previewPlannerRoute(coordinates, originName = "Origin", destinationName = "Destination") {
+    if (!coordinates || coordinates.length < 2) return;
+    initPlannerMap();
+    if (!plannerMap) return;
+
+    clearPlannerLayers();
+
+    const distanceKm = routeDistanceKm(coordinates);
+    const color = getRouteColorByDistance(distanceKm);
+
+    const glow = L.polyline(coordinates, {
+        color,
+        weight: 7,
+        opacity: 0.18,
+        lineCap: "round",
+        lineJoin: "round",
+        interactive: false
+    }).addTo(plannerMap);
+
+    const main = L.polyline(coordinates, {
+        color,
+        weight: 3.5,
+        opacity: 0.95,
+        lineCap: "round",
+        lineJoin: "round"
+    }).addTo(plannerMap);
+
+    const start = coordinates[0];
+    const end = coordinates[coordinates.length - 1];
+
+    const startM = L.circleMarker(start, {
+        radius: 6,
+        color: "#2563eb",
+        weight: 2,
+        fillColor: "#fff",
+        fillOpacity: 1
+    }).bindPopup(`<b>${originName}</b>`).addTo(plannerMap);
+
+    const endM = L.circleMarker(end, {
+        radius: 6,
+        color: "#dc2626",
+        weight: 2,
+        fillColor: "#fff",
+        fillOpacity: 1
+    }).bindPopup(`<b>${destinationName}</b>`).addTo(plannerMap);
+
+    plannerLayers.push(glow, main, startM, endM);
+
+    try {
+        const bounds = L.latLngBounds(coordinates);
+        if (bounds.isValid()) {
+            plannerMap.fitBounds(bounds, { padding: [28, 28], maxZoom: 12 });
+        }
+    } catch (_) {}
+}
+
+export function refreshPlannerMapSize() {
+    if (plannerMap && typeof plannerMap.invalidateSize === "function") {
+        plannerMap.invalidateSize(true);
+    }
+}

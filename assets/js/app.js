@@ -17,7 +17,8 @@ import {
 
 import {
     initializeMap,
-    refreshMap
+    refreshMap,
+    refreshPlannerMapSize
 } from "./map.js";
 
 
@@ -58,6 +59,17 @@ import {
 import {
     initializeMapExport
 } from "./mapExport.js";
+
+import {
+    initializeZonesPage,
+    renderZonesPage
+} from "./zones.js";
+
+import {
+    initializeAdminPanel,
+    updateAdminVisibility
+} from "./admin.js";
+
 
 
 
@@ -230,6 +242,12 @@ if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
         initializeMap();
 
         initializeMapExport();
+
+        initializeZonesPage();
+        initializeAdminPanel();
+        window.updateAdminVisibility = updateAdminVisibility;
+        window.renderZonesPage = renderZonesPage;
+
 
 
 

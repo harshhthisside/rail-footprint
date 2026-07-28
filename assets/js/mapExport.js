@@ -243,7 +243,7 @@ function composeCard(mapCanvas) {
         { label: "Stations", value: txt("statStations") || "0", icon: "📍" },
         { label: "Distance", value: txt("statDistance") || "0 km", icon: "🛤" },
         { label: "States", value: (txt("statStates") || "0") + " / 28", icon: "🇮🇳" },
-        { label: "Zones", value: (txt("statZones") || "0") + " / 18", icon: "🗺" },
+        { label: "Zones", value: (txt("statZones") || "0") + " / 19", icon: "🗺" },
         { label: "Travel Time", value: txt("statTravelTime") || "0h", icon: "⏱" },
         { label: "Network", value: (txt("statNetwork") || "0") + "%", icon: "📈" }
     ];

@@ -542,3 +542,126 @@ body.dark .danger-outline:hover{
         font-size: 15px;
     }
 }
+
+/* ==========================================
+   Journeys workspace: form + map split
+========================================== */
+
+.journeys-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 1.05fr);
+    gap: 20px;
+    align-items: start;
+}
+
+.journeys-left {
+    min-width: 0;
+}
+
+.journeys-right {
+    position: sticky;
+    top: 12px;
+    min-width: 0;
+}
+
+.planner-map-card {
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 420px;
+    height: calc(100vh - 200px);
+    max-height: 720px;
+}
+
+.planner-map-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.planner-map-header h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.planner-map-hint {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.planner-map {
+    flex: 1;
+    min-height: 320px;
+    width: 100%;
+    background: var(--background);
+}
+
+/* Journey search */
+.journey-search-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.journey-search-bar input {
+    flex: 1;
+    padding: 12px 16px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+}
+
+.journey-search-bar input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.journey-search-count {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.journey-card.search-highlight {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+}
+
+@media (max-width: 1100px) {
+    .journeys-workspace {
+        grid-template-columns: 1fr;
+    }
+    .journeys-right {
+        position: relative;
+        top: 0;
+        order: -1; /* map on top while adding on tablet/mobile */
+    }
+    .planner-map-card {
+        height: 280px;
+        min-height: 260px;
+        max-height: 320px;
+    }
+    .planner-map {
+        min-height: 200px;
+    }
+}
+
+@media (max-width: 768px) {
+    .planner-map-card {
+        height: 240px;
+        min-height: 220px;
+    }
+    .journey-search-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

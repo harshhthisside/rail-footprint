@@ -21,6 +21,7 @@ import {
     orderBy,
     updateDoc,
     getDoc,
+    setDoc,
     writeBatch
 }
 from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
@@ -442,4 +443,42 @@ export async function deleteUserProfile() {
 
     console.log("User profile document deleted");
 
+}
+
+
+// ==========================================
+// Manual zone overrides (user profile)
+// ==========================================
+
+export async function getManualZones() {
+    if (!auth.currentUser) return [];
+    try {
+        const userRef = doc(db, "users", auth.currentUser.uid);
+        const snap = await getDoc(userRef);
+        if (!snap.exists()) return [];
+        const data = snap.data() || {};
+        const zones = data.manualZones;
+        return Array.isArray(zones) ? zones.filter(Boolean) : [];
+    } catch (e) {
+        console.warn("getManualZones", e);
+        return [];
+    }
+}
+
+export async function saveManualZones(zones) {
+    if (!auth.currentUser)
+        throw new Error("Please sign in first.");
+    const list = Array.isArray(zones)
+        ? [...new Set(zones.map(String).filter(Boolean))]
+        : [];
+    const userRef = doc(db, "users", auth.currentUser.uid);
+    await setDoc(
+        userRef,
+        {
+            manualZones: list,
+            manualZonesUpdatedAt: Date.now()
+        },
+        { merge: true }
+    );
+    return list;
 }

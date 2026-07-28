@@ -351,6 +351,13 @@ export function initializeAuth(callback = null) {
 
 
 
+            // Admin panel visibility (owner-only nav)
+            if (typeof window.updateAdminVisibility === "function") {
+                try {
+                    window.updateAdminVisibility(user);
+                } catch (_) {}
+            }
+
             if (callback) {
 
 

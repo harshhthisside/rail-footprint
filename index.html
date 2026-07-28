@@ -76,6 +76,10 @@
                 <span class="nav-icon">⚙️</span>
                 <span>Settings</span>
             </a>
+            <a href="#" class="nav-item admin-only" data-view="admin" id="adminNavItem" style="display:none;">
+                <span class="nav-icon">🛡️</span>
+                <span>Admin</span>
+            </a>
         </nav>
 
         <!-- User Card (bottom) -->
@@ -282,41 +286,59 @@
                     <button id="backToMyFootprint">← Back To My Footprint</button>
                 </div>
 
-                <!-- Add Journey Form -->
-                <div class="glass-card form">
-                    <h3 style="margin:0 0 16px; font-size:18px;">Add Journey</h3>
+                <div class="journeys-workspace">
+                    <div class="journeys-left">
+                        <!-- Add Journey Form -->
+                        <div class="glass-card form" id="addJourneyFormCard">
+                            <h3 style="margin:0 0 16px; font-size:18px;">Add Journey</h3>
 
-                    <label>Origin Station</label>
-                    <div class="station-field">
-                        <input id="originInput" type="text" placeholder="Search station" autocomplete="off" autocapitalize="off" spellcheck="false">
-                        <div id="originSuggestions" class="suggestions"></div>
+                            <label>Origin Station</label>
+                            <div class="station-field">
+                                <input id="originInput" type="text" placeholder="Search station" autocomplete="off" autocapitalize="off" spellcheck="false">
+                                <div id="originSuggestions" class="suggestions"></div>
+                            </div>
+
+                            <button id="addIntermediateBtn" type="button">＋ Add Intermediate Station</button>
+                            <div id="intermediateContainer" class="intermediate-container"></div>
+
+                            <label>Destination Station</label>
+                            <div class="station-field">
+                                <input id="destinationInput" type="text" placeholder="Search station" autocomplete="off" autocapitalize="off" spellcheck="false">
+                                <div id="destinationSuggestions" class="suggestions"></div>
+                            </div>
+
+                            <label style="margin-top:16px;">Travel Time <span style="font-weight:400;color:var(--text-secondary);">(optional)</span></label>
+                            <div style="display:flex;gap:10px;align-items:center;">
+                                <input id="durationHours" type="number" min="0" max="99" step="1" inputmode="numeric" placeholder="Hours" style="flex:1;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--background);color:var(--text);font-size:14px;box-sizing:border-box;">
+                                <span style="color:var(--text-secondary);font-size:13px;">h</span>
+                                <input id="durationMinutes" type="number" min="0" max="59" step="1" inputmode="numeric" placeholder="Minutes" style="flex:1;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--background);color:var(--text);font-size:14px;box-sizing:border-box;">
+                                <span style="color:var(--text-secondary);font-size:13px;">m</span>
+                            </div>
+                            <p style="margin:6px 0 0;font-size:12px;color:var(--text-secondary);">Leave blank to auto-estimate from distance.</p>
+
+                            <button id="addJourneyBtn" type="button">🚆 Add Journey</button>
+                        </div>
+
+                        <!-- Journey search + list -->
+                        <section id="journeys" style="margin-top:20px;">
+                            <div class="journey-search-bar">
+                                <input type="search" id="journeySearchInput" placeholder="Search journeys by station name or code…" autocomplete="off">
+                                <span class="journey-search-count" id="journeySearchCount"></span>
+                            </div>
+                            <div id="journeyList" class="journey-list"></div>
+                        </section>
                     </div>
 
-                    <button id="addIntermediateBtn" type="button">＋ Add Intermediate Station</button>
-                    <div id="intermediateContainer" class="intermediate-container"></div>
-
-                    <label>Destination Station</label>
-                    <div class="station-field">
-                        <input id="destinationInput" type="text" placeholder="Search station" autocomplete="off" autocapitalize="off" spellcheck="false">
-                        <div id="destinationSuggestions" class="suggestions"></div>
+                    <div class="journeys-right">
+                        <div class="glass-card planner-map-card">
+                            <div class="planner-map-header">
+                                <h3>Route Preview</h3>
+                                <span class="planner-map-hint">Select stations to preview</span>
+                            </div>
+                            <div id="plannerMap" class="planner-map"></div>
+                        </div>
                     </div>
-
-                    <label style="margin-top:16px;">Travel Time <span style="font-weight:400;color:var(--text-secondary);">(optional)</span></label>
-                    <div style="display:flex;gap:10px;align-items:center;">
-                        <input id="durationHours" type="number" min="0" max="99" step="1" inputmode="numeric" placeholder="Hours" style="flex:1;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--background);color:var(--text);font-size:14px;box-sizing:border-box;">
-                        <span style="color:var(--text-secondary);font-size:13px;">h</span>
-                        <input id="durationMinutes" type="number" min="0" max="59" step="1" inputmode="numeric" placeholder="Minutes" style="flex:1;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--background);color:var(--text);font-size:14px;box-sizing:border-box;">
-                        <span style="color:var(--text-secondary);font-size:13px;">m</span>
-                    </div>
-                    <p style="margin:6px 0 0;font-size:12px;color:var(--text-secondary);">Leave blank to auto-estimate from distance.</p>
-
-                    <button id="addJourneyBtn" type="button">🚆 Add Journey</button>
                 </div>
-
-                <!-- Journey List -->
-                <section id="journeys" style="margin-top:28px;">
-                    <div id="journeyList" class="journey-list"></div>
-                </section>
 
             </section>
 
@@ -343,9 +365,17 @@
                     <h2>Zones Covered</h2>
                     <p>Indian Railways zones you have travelled through</p>
                 </div>
-                <div class="placeholder-card">
-                    <p>Zones overview coming soon.</p>
+                <div class="zones-summary glass-card" id="zonesSummary">
+                    <div class="zones-summary-stat">
+                        <span class="zones-summary-value" id="zonesCoveredCount">0</span>
+                        <span class="zones-summary-label">Zones covered</span>
+                    </div>
+                    <div class="zones-summary-bar">
+                        <div class="zones-summary-fill" id="zonesProgressFill" style="width:0%"></div>
+                    </div>
+                    <div class="zones-summary-meta" id="zonesProgressText">0 of 19 zones</div>
                 </div>
+                <div id="zonesGrid" class="zones-grid"></div>
             </section>
 
             <!-- ========== GALLERY VIEW (placeholder) ========== -->
@@ -491,6 +521,84 @@
                 </div>
             </section>
 
+            <!-- ========== ADMIN VIEW ========== -->
+            <section id="view-admin" class="view">
+                <div class="page-back-bar">
+                    <button type="button" class="page-back-btn" data-back-to="dashboard">← Back</button>
+                </div>
+                <div class="view-header">
+                    <h2>🛡️ Admin Panel</h2>
+                    <p>Restricted tools for the app owner</p>
+                </div>
+                <div class="admin-grid">
+                    <div class="glass-card admin-card">
+                        <h3>Session</h3>
+                        <p id="adminSessionInfo">Sign in as admin to use tools.</p>
+                        <div class="admin-actions">
+                            <button type="button" class="admin-btn" id="adminCopyUid">Copy my UID</button>
+                            <button type="button" class="admin-btn" id="adminRefreshStats">Refresh statistics</button>
+                            <button type="button" class="admin-btn" id="adminExportData">Export my journeys (JSON)</button>
+                        </div>
+                    </div>
+                    <div class="glass-card admin-card">
+                        <h3>Map &amp; cache</h3>
+                        <p>Force map resize and clear in-memory route layers.</p>
+                        <div class="admin-actions">
+                            <button type="button" class="admin-btn" id="adminInvalidateMap">Invalidate map size</button>
+                            <button type="button" class="admin-btn" id="adminClearRouteLayers">Clear route layers</button>
+                            <button type="button" class="admin-btn" id="adminReloadJourneys">Reload journeys</button>
+                        </div>
+                    </div>
+                    <div class="glass-card admin-card">
+                        <h3>Quick navigation</h3>
+                        <p>Jump to key screens without the sidebar.</p>
+                        <div class="admin-actions admin-nav-actions">
+                            <button type="button" class="admin-btn admin-nav" data-goto="dashboard">Dashboard</button>
+                            <button type="button" class="admin-btn admin-nav" data-goto="journeys">Journeys</button>
+                            <button type="button" class="admin-btn admin-nav" data-goto="zones">Zones</button>
+                            <button type="button" class="admin-btn admin-nav" data-goto="analytics">Analytics</button>
+                            <button type="button" class="admin-btn admin-nav" data-goto="explore">Explore</button>
+                        </div>
+                    </div>
+                    <div class="glass-card admin-card">
+                        <h3>Appearance</h3>
+                        <p>Toggle theme from admin without leaving this page.</p>
+                        <div class="admin-actions">
+                            <button type="button" class="admin-btn" id="adminToggleTheme">Toggle light / dark</button>
+                        </div>
+                    </div>
+                    <div class="glass-card admin-card danger-card">
+                        <h3>Danger zone</h3>
+                        <p>These actions only affect <strong>your</strong> account data.</p>
+                        <div class="admin-actions">
+                            <button type="button" class="admin-btn admin-danger" id="adminDeleteAllJourneys">Delete all my journeys</button>
+                            <button type="button" class="admin-btn admin-danger" id="adminClearManualZones">Clear manual zone ticks</button>
+                        </div>
+                    </div>
+                    <div class="glass-card admin-card">
+                        <h3>System</h3>
+                        <ul class="admin-sys-list" id="adminSysList">
+                            <li>Loading…</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Manual zone coverage -->
+                <div class="glass-card admin-zones-card" style="margin-top:18px;">
+                    <div class="admin-zones-header">
+                        <div>
+                            <h3 style="margin:0 0 4px;">Manual zone coverage</h3>
+                            <p style="margin:0;font-size:13px;color:var(--text-secondary);">
+                                Tick zones you’ve covered that journeys didn’t detect. Saved to your profile and merged with automatic detection.
+                            </p>
+                        </div>
+                        <button type="button" class="admin-btn" id="adminSaveManualZones" style="width:auto;min-width:140px;">Save zones</button>
+                    </div>
+                    <div id="adminZonesGrid" class="admin-zones-grid"></div>
+                    <p id="adminZonesStatus" class="admin-zones-status"></p>
+                </div>
+            </section>
+
         </div><!-- /views -->
 
     </div><!-- /main -->
@@ -549,7 +657,8 @@
         achievements: "Your milestones and badges",
         explore: "Discover other explorers",
         analytics: "Detailed breakdown of your rail footprint",
-        settings: "Account and preferences"
+        settings: "Account and preferences",
+        admin: "Owner tools and system controls"
     };
 
     // Views without a sidebar nav item need a back target
@@ -611,6 +720,29 @@
                 }
                 window.dispatchEvent(new Event("resize"));
             }, 180);
+        }
+
+        // Planner map on Journeys view
+        if (viewName === "journeys") {
+            setTimeout(() => {
+                if (typeof window.plannerMap !== "undefined" && window.plannerMap) {
+                    window.plannerMap.invalidateSize(true);
+                }
+            }, 200);
+        }
+
+        // Zones page dynamic render
+        if (viewName === "zones" && typeof window.renderZonesPage === "function") {
+            setTimeout(() => window.renderZonesPage(), 40);
+        }
+
+        // Admin only
+        if (viewName === "admin") {
+            const nav = document.getElementById("adminNavItem");
+            if (nav && nav.style.display === "none") {
+                switchView("dashboard", { skipHistory: true });
+                return;
+            }
         }
     }
 

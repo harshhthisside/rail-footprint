@@ -22,7 +22,10 @@ import { calculateRoute } from "./routing.js";
 import {
     drawAllJourneys,
     focusJourney,
-    removeJourneyFromMap
+    removeJourneyFromMap,
+    initPlannerMap,
+    previewPlannerRoute,
+    clearPlannerPreview
 } from "./map.js";
 
 import { loadStatistics } from "./statistics.js";
@@ -56,6 +59,27 @@ export function initializeJourneyManager() {
     initialized = true;
 
     renderJourneys();
+
+    // Planner map (right panel on Journeys view)
+    try { initPlannerMap(); } catch (e) { console.warn(e); }
+    window.updatePlannerPreviewFromForm = updatePlannerPreviewFromForm;
+
+    // Journey search
+    const searchInput = document.getElementById("journeySearchInput");
+    if (searchInput) {
+        let t = null;
+        searchInput.addEventListener("input", () => {
+            if (t) clearTimeout(t);
+            t = setTimeout(() => applyJourneySearch(searchInput.value), 120);
+        });
+    }
+
+    // Live preview when stations change
+    ["originInput", "destinationInput"].forEach((id) => {
+        const el = document.getElementById(id);
+        el?.addEventListener("change", () => updatePlannerPreviewFromForm());
+        el?.addEventListener("blur", () => updatePlannerPreviewFromForm());
+    });
 
     if (addJourneyBtn) {
         addJourneyBtn.addEventListener("click", (e) => {
@@ -281,6 +305,7 @@ export async function renderJourneys() {
         const card = document.createElement("div");
         card.className = "journey-card";
         card.dataset.journeyId = journey.id;
+        card.dataset.search = journeySearchHaystack(journey);
 
         const totalStations =
             1 + (journey.intermediates?.length || 0) + 1;
@@ -387,6 +412,11 @@ export async function renderJourneys() {
     }
 
     journeyList.appendChild(deleteAllBtn);
+
+    const searchInput = document.getElementById("journeySearchInput");
+    if (searchInput && searchInput.value.trim()) {
+        applyJourneySearch(searchInput.value);
+    }
 }
 
 function escapeHtml(str) {
@@ -404,6 +434,14 @@ function escapeHtml(str) {
 function loadJourneyForEditing(journey) {
 
     editingJourneyId = journey.id;
+
+    // Ensure journeys view is visible
+    if (typeof window.switchView === "function") {
+        const journeysView = document.getElementById("view-journeys");
+        if (journeysView && !journeysView.classList.contains("active")) {
+            window.switchView("journeys");
+        }
+    }
 
     const origin = document.getElementById("originInput");
     const destination = document.getElementById("destinationInput");
@@ -495,3 +533,87 @@ function resetJourneyForm() {
     if (addJourneyBtn) addJourneyBtn.innerHTML = "🚆 Add Journey";
 
 }
+
+
+// ==========================================
+// Journey Search
+// ==========================================
+
+function journeySearchHaystack(journey) {
+    const parts = [];
+    const push = (s) => {
+        if (!s) return;
+        parts.push(String(s.name || ""), String(s.code || ""));
+    };
+    push(journey.origin);
+    push(journey.destination);
+    (journey.intermediates || []).forEach(push);
+    return parts.join(" ").toLowerCase();
+}
+
+function applyJourneySearch(query) {
+    const q = String(query || "").trim().toLowerCase();
+    const cards = journeyList ? journeyList.querySelectorAll(".journey-card") : [];
+    let visible = 0;
+    cards.forEach((card) => {
+        const hay = card.dataset.search || "";
+        const show = !q || hay.includes(q);
+        card.style.display = show ? "" : "none";
+        if (show) visible += 1;
+    });
+    const countEl = document.getElementById("journeySearchCount");
+    if (countEl) {
+        countEl.textContent = q ? `${visible} match${visible === 1 ? "" : "es"}` : "";
+    }
+}
+
+// ==========================================
+// Planner map preview from form fields
+// ==========================================
+
+function readStationFromInput(input) {
+    if (!input || !input.dataset.lat || !input.dataset.lon) return null;
+    return {
+        name: input.dataset.name || input.value,
+        code: input.dataset.code || "",
+        lat: Number(input.dataset.lat),
+        lon: Number(input.dataset.lon),
+        graph_node: input.dataset.node !== "" && input.dataset.node != null
+            ? Number(input.dataset.node)
+            : undefined
+    };
+}
+
+export function updatePlannerPreviewFromForm() {
+    try {
+        const origin = readStationFromInput(document.getElementById("originInput"));
+        const destination = readStationFromInput(document.getElementById("destinationInput"));
+        if (!origin || !destination) {
+            clearPlannerPreview();
+            return;
+        }
+        const intermediates = [];
+        document.querySelectorAll(".intermediateInput").forEach((inp) => {
+            const s = readStationFromInput(inp);
+            if (s) intermediates.push(s);
+        });
+        const stops = [origin, ...intermediates, destination];
+        const coords = calculateRoute(stops);
+        if (coords && coords.length) {
+            previewPlannerRoute(coords, origin.name, destination.name);
+        }
+    } catch (e) {
+        console.warn("Planner preview:", e);
+    }
+}
+
+export function openJourneyInEditor(journey) {
+    loadJourneyForEditing(journey);
+    const form = document.getElementById("addJourneyFormCard");
+    form?.scrollIntoView({ behavior: "smooth", block: "start" });
+    // Highlight matched card
+    document.querySelectorAll(".journey-card").forEach((c) => {
+        c.classList.toggle("search-highlight", c.dataset.journeyId === journey.id);
+    });
+}
+

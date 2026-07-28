@@ -892,3 +892,333 @@ body.dark #sidebar {
 }
 
 /* Mobile map height lives in mobile.css */
+
+/* ==========================================
+   Zones Covered
+========================================== */
+
+.zones-summary {
+    padding: 20px 22px;
+    margin-bottom: 20px;
+}
+
+.zones-summary-stat {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.zones-summary-value {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--text);
+}
+
+.zones-summary-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.zones-summary-bar {
+    height: 10px;
+    border-radius: 999px;
+    background: var(--border);
+    overflow: hidden;
+}
+
+.zones-summary-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #22c55e, #16a34a);
+    transition: width 0.45s ease;
+}
+
+.zones-summary-meta {
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.zones-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+}
+
+.zone-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow-sm);
+    transition: 0.25s ease;
+}
+
+.zone-card.covered {
+    border-color: rgba(34, 197, 94, 0.45);
+    background: linear-gradient(
+        160deg,
+        rgba(34, 197, 94, 0.08),
+        var(--card) 55%
+    );
+}
+
+.zone-card.locked {
+    opacity: 0.72;
+}
+
+.zone-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+
+.zone-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.zone-code {
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: 0.4px;
+    color: var(--primary);
+}
+
+.zone-tick {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.zone-card.covered .zone-tick {
+    background: rgba(34, 197, 94, 0.18);
+    color: #16a34a;
+}
+
+.zone-card.locked .zone-tick {
+    background: rgba(148, 163, 184, 0.18);
+    color: #94a3b8;
+}
+
+.zone-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.zone-hq {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.zone-status {
+    margin-top: 10px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.zone-card.covered .zone-status {
+    color: #16a34a;
+}
+
+.zone-card.locked .zone-status {
+    color: var(--text-secondary);
+}
+
+/* ==========================================
+   Admin Panel
+========================================== */
+
+.admin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+}
+
+.admin-card {
+    padding: 20px;
+}
+
+.admin-card h3 {
+    margin: 0 0 8px;
+    font-size: 16px;
+}
+
+.admin-card p {
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.45;
+}
+
+.admin-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.admin-btn {
+    width: 100%;
+    padding: 12px 14px;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    background: rgba(37, 99, 235, 0.12);
+    color: var(--primary);
+    transition: 0.2s;
+}
+
+.admin-btn:hover {
+    background: var(--primary);
+    color: #fff;
+}
+
+.admin-btn.admin-danger {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+}
+
+.admin-btn.admin-danger:hover {
+    background: #ef4444;
+    color: #fff;
+}
+
+.admin-sys-list {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+}
+
+.admin-card.danger-card {
+    border-color: rgba(239, 68, 68, 0.35);
+}
+
+@media (max-width: 768px) {
+    .zones-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    .zone-card {
+        padding: 12px 14px;
+        border-radius: 14px;
+    }
+    .zones-summary-value {
+        font-size: 26px;
+    }
+}
+
+@media (max-width: 420px) {
+    .zones-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Zone badges */
+.zone-badge {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+}
+.zone-badge.auto {
+    background: rgba(37, 99, 235, 0.12);
+    color: var(--primary);
+}
+.zone-badge.manual {
+    background: rgba(245, 158, 11, 0.15);
+    color: #d97706;
+}
+
+/* Admin manual zones */
+.admin-zones-card {
+    padding: 20px;
+}
+.admin-zones-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.admin-zones-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 8px;
+    max-height: 420px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-right: 4px;
+}
+.admin-zone-row {
+    display: grid;
+    grid-template-columns: 22px 52px 1fr auto;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--background);
+    cursor: pointer;
+    font-size: 13px;
+}
+.admin-zone-row.is-auto {
+    opacity: 0.9;
+    background: rgba(34, 197, 94, 0.06);
+    border-color: rgba(34, 197, 94, 0.25);
+}
+.admin-zone-code {
+    font-weight: 800;
+    color: var(--primary);
+}
+.admin-zone-name {
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.admin-zone-tag {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+.admin-zones-status {
+    margin: 12px 0 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+.admin-nav-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+@media (max-width: 768px) {
+    .admin-zones-header {
+        flex-direction: column;
+    }
+    .admin-zones-header .admin-btn {
+        width: 100%;
+    }
+    .admin-zone-row {
+        grid-template-columns: 22px 48px 1fr;
+    }
+    .admin-zone-tag {
+        grid-column: 2 / -1;
+    }
+}

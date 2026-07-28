@@ -2,7 +2,7 @@
 // Rail Footprint — Statistics (accurate)
 // ==========================================
 
-import { loadJourneys } from "./firestore.js";
+import { loadJourneys, getManualZones } from "./firestore.js";
 
 // ==========================================
 // Haversine (km)
@@ -143,9 +143,12 @@ const STATION_ZONE = {
     CSTM: "CR", LTT: "CR", PUNE: "CR", NGP: "CR", KYN: "CR",
     SBC: "SWR", YPR: "SWR", UBL: "SWR", MYS: "SWR",
     MAS: "SR", MS: "SR", CBE: "SR", MDU: "SR", TVC: "SR", ERS: "SR",
-    SC: "SCR", HYB: "SCR", BZA: "SCR", VSKP: "ECoR",
+    SC: "SCR", HYB: "SCR",
+    // South Coast Railway (SCoR) — HQ Visakhapatnam
+    VSKP: "SCoR", BZA: "SCoR", GNT: "SCoR", RJY: "SCoR", DVD: "SCoR",
+    SLO: "SCoR", TUNI: "SCoR", ANV: "SCoR", AKP: "SCoR", VZM: "SCoR",
     HWH: "ER", SDAH: "ER", KOAA: "ER", ASN: "ER",
-    BBS: "ECoR", PURI: "ECoR",
+    BBS: "ECoR", PURI: "ECoR", CTC: "ECoR", BAM: "ECoR",
     BPL: "WCR", JBP: "WCR", KOTA: "WCR",
     R: "SECR", BSP: "SECR",
     PNBE: "ECR", RJPB: "ECR",
@@ -174,6 +177,8 @@ function getZoneFromCoords(lat, lon) {
     if (lat >= 15.5 && lat < 22.0 && lon >= 72.5 && lon < 79.0) return "CR";
     if (lat >= 12.0 && lat < 18.0 && lon >= 74.0 && lon < 78.5) return "SWR";
     if (lat >= 8.0 && lat < 14.0 && lon >= 76.0 && lon < 80.5) return "SR";
+    // South Coast Railway (coastal Andhra / north coastal AP)
+    if (lat >= 15.5 && lat < 19.5 && lon >= 79.5 && lon < 84.5) return "SCoR";
     if (lat >= 14.5 && lat < 20.0 && lon >= 77.5 && lon < 84.0) return "SCR";
     if (lat >= 16.5 && lat < 20.5 && lon >= 81.5) return "ECoR";
     if (lat >= 24.0 && lon >= 88.0) return "NFR";
@@ -182,11 +187,59 @@ function getZoneFromCoords(lat, lon) {
     return "IR";
 }
 
+
 function resolveZone(code, lat, lon) {
     if (code && STATION_ZONE[code]) return STATION_ZONE[code];
     if (lat != null && lon != null) return getZoneFromCoords(lat, lon);
     return null;
 }
+
+export const IR_ZONES = [
+    { code: "NR",   name: "Northern Railway",              hq: "New Delhi" },
+    { code: "NCR",  name: "North Central Railway",         hq: "Prayagraj" },
+    { code: "NER",  name: "North Eastern Railway",         hq: "Gorakhpur" },
+    { code: "NFR",  name: "Northeast Frontier Railway",    hq: "Guwahati" },
+    { code: "NWR",  name: "North Western Railway",         hq: "Jaipur" },
+    { code: "ER",   name: "Eastern Railway",               hq: "Kolkata" },
+    { code: "ECR",  name: "East Central Railway",          hq: "Hajipur" },
+    { code: "ECoR", name: "East Coast Railway",            hq: "Bhubaneswar" },
+    { code: "SCoR", name: "South Coast Railway",           hq: "Visakhapatnam" },
+    { code: "SER",  name: "South Eastern Railway",         hq: "Kolkata" },
+    { code: "SECR", name: "South East Central Railway",    hq: "Bilaspur" },
+    { code: "SR",   name: "Southern Railway",              hq: "Chennai" },
+    { code: "SCR",  name: "South Central Railway",         hq: "Secunderabad" },
+    { code: "SWR",  name: "South Western Railway",         hq: "Hubballi" },
+    { code: "WR",   name: "Western Railway",               hq: "Mumbai" },
+    { code: "WCR",  name: "West Central Railway",          hq: "Jabalpur" },
+    { code: "CR",   name: "Central Railway",               hq: "Mumbai" },
+    { code: "KR",   name: "Konkan Railway",                hq: "Navi Mumbai" },
+    { code: "Metro", name: "Metro / Other",                 hq: "Various" }
+];
+
+export const TOTAL_IR_ZONES = IR_ZONES.filter(z => z.code !== "Metro").length;
+
+export function getCoveredZonesFromJourneys(journeys, manualZones = []) {
+    const zoneSet = new Set();
+    for (const journey of journeys || []) {
+        const collect = (stop) => {
+            if (!stop) return;
+            const zone = resolveZone(stop.code, stop.lat, stop.lon);
+            if (zone && zone !== "IR") zoneSet.add(zone);
+        };
+        collect(journey.origin);
+        collect(journey.destination);
+        (journey.intermediates || []).forEach(collect);
+    }
+    for (const z of manualZones || []) {
+        if (z && z !== "IR") zoneSet.add(z);
+    }
+    return zoneSet;
+}
+
+export function resolveZoneCode(code, lat, lon) {
+    return resolveZone(code, lat, lon);
+}
+
 
 function formatTravelTime(totalHours) {
     const h = Math.floor(totalHours);
@@ -200,7 +253,7 @@ function formatTravelTime(totalHours) {
 // Main calculator
 // ==========================================
 
-export function calculateJourneyStatistics(journeys) {
+export function calculateJourneyStatistics(journeys, manualZones = []) {
     const stationSet = new Set();
     const stateSet = new Set();
     const zoneSet = new Set();
@@ -269,8 +322,12 @@ export function calculateJourneyStatistics(journeys) {
         }
     }
 
+    for (const z of manualZones || []) {
+        if (z && z !== "IR" && z !== "Metro") zoneSet.add(z);
+    }
+
     const TOTAL_STATES = 28;
-    const TOTAL_ZONES = 18;
+    const TOTAL_ZONES = TOTAL_IR_ZONES;
     const TOTAL_NETWORK_KM = 68000;
 
     const travelHours = totalTravelHours;
@@ -300,7 +357,9 @@ export function calculateJourneyStatistics(journeys) {
 
 export async function loadStatistics() {
     const journeys = await loadJourneys();
-    const stats = calculateJourneyStatistics(journeys);
+    let manualZones = [];
+    try { manualZones = await getManualZones(); } catch (_) {}
+    const stats = calculateJourneyStatistics(journeys, manualZones);
 
     const set = (id, value) => {
         const el = document.getElementById(id);

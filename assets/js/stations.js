@@ -234,6 +234,11 @@ function searchStations(query, container, input) {
 
             container.innerHTML = "";
 
+            // Live route preview on Journeys planner map
+            if (typeof window.updatePlannerPreviewFromForm === "function") {
+                try { window.updatePlannerPreviewFromForm(); } catch (_) {}
+            }
+
         };
 
         container.appendChild(div);
