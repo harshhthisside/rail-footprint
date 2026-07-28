@@ -21,21 +21,56 @@ const stationDots = new Map();
 
 
 // ==========================================
-// Route Colors
+// Distance-based Route Colors
 // ==========================================
 
-const ROUTE_COLORS = [
-
-    "#0f766e",
-    "#2563eb",
-    "#dc2626",
-    "#7c3aed",
-    "#ea580c",
-    "#0891b2",
-    "#16a34a",
-    "#be185d"
-
+const DISTANCE_COLOR_SCALE = [
+    { max: 100,  color: "#5EEAD4" },  // 0–100 km   Mint
+    { max: 300,  color: "#FB923C" },  // 100–300 km Orange
+    { max: 600,  color: "#60A5FA" },  // 300–600 km Sky Blue
+    { max: 900,  color: "#F472B6" },  // 600–900 km Pink
+    { max: 1300, color: "#818CF8" },  // 900–1300 km Indigo
+    { max: 1700, color: "#FB7185" },  // 1300–1700 km Coral Red
+    { max: 2200, color: "#A78BFA" },  // 1700–2200 km Lavender
+    { max: 2800, color: "#4ADE80" },  // 2200–2800 km Lime Green
+    { max: 3500, color: "#FACC15" },  // 2800–3500 km Amber
+    { max: Infinity, color: "#475569" } // 3500+ km Slate
 ];
+
+function haversineKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1 * Math.PI / 180) *
+        Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function routeDistanceKm(coordinates) {
+    if (!coordinates || coordinates.length < 2) return 0;
+    let dist = 0;
+    for (let i = 1; i < coordinates.length; i++) {
+        const a = coordinates[i - 1];
+        const b = coordinates[i];
+        // Support both [lat,lon] arrays and {lat,lon} objects
+        const lat1 = Array.isArray(a) ? a[0] : a.lat;
+        const lon1 = Array.isArray(a) ? a[1] : a.lon;
+        const lat2 = Array.isArray(b) ? b[0] : b.lat;
+        const lon2 = Array.isArray(b) ? b[1] : b.lon;
+        dist += haversineKm(lat1, lon1, lat2, lon2);
+    }
+    return dist;
+}
+
+function getRouteColorByDistance(distanceKm) {
+    for (const band of DISTANCE_COLOR_SCALE) {
+        if (distanceKm <= band.max) return band.color;
+    }
+    return "#212121";
+}
 
 
 
@@ -234,66 +269,26 @@ function isMobileViewport() {
 
 export async function loadRailwayNetwork(){
 
-
     try{
 
+        const response = await fetch("assets/data/railway_lines.geojson");
+        const geojson = await response.json();
+        const mobile = isMobileViewport();
 
-        const response =
-        await fetch(
+        railwayLayer = L.geoJSON(geojson, {
+            style: {
+                color: "#64748b",
+                weight: mobile ? 0.6 : 1,
+                opacity: mobile ? 0.18 : 0.28
+            },
+            interactive: false
+        }).addTo(map);
 
-            "assets/data/railway_lines.geojson"
+        console.log("🚉 Railway Network Loaded");
 
-        );
-
-
-        const geojson =
-        await response.json();
-
-
-
-        railwayLayer =
-        L.geoJSON(
-
-            geojson,
-
-            {
-
-                style:{
-
-
-                    color:"#64748b",
-
-                    weight:1,
-
-                    opacity:0.28
-
-
-                }
-
-            }
-
-        ).addTo(map);
-
-
-
-        console.log(
-            "🚉 Railway Network Loaded"
-        );
-
-
+    } catch (error) {
+        console.error("Railway loading failed", error);
     }
-
-    catch(error){
-
-
-        console.error(
-            "Railway loading failed",
-            error
-        );
-
-
-    }
-
 
 }
 
@@ -558,15 +553,8 @@ export function drawJourney(
 
 
 
-    const color =
-
-    ROUTE_COLORS[
-
-        journeyLayers.size %
-
-        ROUTE_COLORS.length
-
-    ];
+    const distanceKm = routeDistanceKm(coordinates);
+    const color = getRouteColorByDistance(distanceKm);
 
 
 
@@ -724,15 +712,8 @@ export function drawAllJourneys(journeys){
 
 
 
-            const color =
-
-            ROUTE_COLORS[
-
-                index %
-
-                ROUTE_COLORS.length
-
-            ];
+            const distanceKm = routeDistanceKm(journey.route);
+            const color = getRouteColorByDistance(distanceKm);
 
 
 
@@ -1044,15 +1025,8 @@ export function drawUserFootprint(journeys){
 
 
 
-        const color =
-
-        ROUTE_COLORS[
-
-            index %
-
-            ROUTE_COLORS.length
-
-        ];
+        const distanceKm = routeDistanceKm(journey.route);
+        const color = getRouteColorByDistance(distanceKm);
 
 
 

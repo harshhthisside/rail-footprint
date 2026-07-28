@@ -179,7 +179,9 @@ async function createJourney() {
 
     try {
         const coordinates = calculateRoute(stops);
-        const optimizedRoute = simplifyRoute(coordinates, 2000);
+        // Fewer points on mobile/tablet for smoother rendering
+        const maxPts = (typeof window !== "undefined" && window.innerWidth <= 900) ? 900 : 2000;
+        const optimizedRoute = simplifyRoute(coordinates, maxPts);
 
         if (!coordinates || coordinates.length === 0) {
             alert("No railway route found between the selected stations.");
@@ -188,8 +190,18 @@ async function createJourney() {
 
         const hoursEl = document.getElementById("durationHours");
         const minsEl = document.getElementById("durationMinutes");
-        const hours = hoursEl ? parseInt(hoursEl.value, 10) || 0 : 0;
-        const mins = minsEl ? parseInt(minsEl.value, 10) || 0 : 0;
+        // Accept empty, 0, 00, etc. without HTML5 / parse errors
+        const parseNonNegInt = (el) => {
+            if (!el) return 0;
+            const raw = String(el.value ?? "").trim();
+            if (raw === "") return 0;
+            const n = parseInt(raw, 10);
+            return Number.isFinite(n) && n >= 0 ? n : 0;
+        };
+        let hours = parseNonNegInt(hoursEl);
+        let mins = parseNonNegInt(minsEl);
+        if (mins > 59) mins = 59;
+        if (hours > 99) hours = 99;
         const durationMinutes = (hours * 60) + mins;
 
         const journey = {

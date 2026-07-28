@@ -201,18 +201,30 @@
 }
 
 /* =========================================================
-   AUTOCOMPLETE
+   STATION FIELD + AUTOCOMPLETE (always open downward)
 ========================================================= */
 
+.station-field {
+    position: relative;
+    width: 100%;
+    margin-bottom: 4px;
+}
+
 .suggestions{
-    margin-top:6px;
-    border-radius:16px;
-    overflow:hidden;
-    background:var(--card);
-    border:1px solid var(--border);
-    box-shadow:0 14px 35px rgba(15,23,42,.12);
-    max-height:240px;
-    overflow-y:auto;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 4px;
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--card);
+    border: 1px solid var(--border);
+    box-shadow: 0 14px 35px rgba(15,23,42,.18);
+    max-height: 240px;
+    overflow-y: auto;
+    z-index: 500;
+    -webkit-overflow-scrolling: touch;
 }
 
 .station-item{
@@ -266,10 +278,17 @@
         height:48px;
     }
 
+    /* Force suggestions always below the field on mobile */
+    .station-field .suggestions,
     .intermediate-wrapper .suggestions,
     .intermediate-suggestions{
-        right:0;
-        max-height:200px;
+        position: absolute !important;
+        top: 100% !important;
+        bottom: auto !important;
+        left: 0 !important;
+        right: 0 !important;
+        max-height: min(220px, 40vh);
+        z-index: 800;
     }
 
 }

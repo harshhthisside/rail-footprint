@@ -165,6 +165,20 @@ export function calculateRoute(stations) {
 
     }
 
+    // Snap route ends to true station coordinates so markers & polylines
+    // align with the actual station (fixes large snap_distance offsets
+    // such as Vasco da Gama / VSG where graph node is several km away).
+    if (fullCoordinates.length > 0 && stations.length >= 2) {
+        fullCoordinates[0] = [
+            Number(stations[0].lat),
+            Number(stations[0].lon)
+        ];
+        fullCoordinates[fullCoordinates.length - 1] = [
+            Number(stations[stations.length - 1].lat),
+            Number(stations[stations.length - 1].lon)
+        ];
+    }
+
     console.log(
         "Total Route Points:",
         fullCoordinates.length

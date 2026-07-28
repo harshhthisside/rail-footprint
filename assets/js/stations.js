@@ -90,14 +90,31 @@ export async function initializeStationSearch() {
 
 export function attachStationSearch(input, suggestionBox) {
 
+    let debounceTimer = null;
+
     input.addEventListener("input", () => {
 
-        searchStations(
-            input.value,
-            suggestionBox,
-            input
-        );
+        if (debounceTimer) clearTimeout(debounceTimer);
 
+        debounceTimer = setTimeout(() => {
+
+            searchStations(
+                input.value,
+                suggestionBox,
+                input
+            );
+
+        }, 120);
+
+    });
+
+    // Keep dropdown below field when focusing on mobile (scroll into view)
+    input.addEventListener("focus", () => {
+        setTimeout(() => {
+            try {
+                input.scrollIntoView({ block: "center", behavior: "smooth" });
+            } catch (_) {}
+        }, 300);
     });
 
 }

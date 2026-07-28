@@ -339,6 +339,24 @@
         font-size: 16px; /* prevents iOS zoom on focus */
     }
 
+    /* Journey form autocomplete always opens downward */
+    .station-field {
+        position: relative;
+        z-index: 20;
+    }
+
+    .station-field .suggestions,
+    .form .suggestions {
+        position: absolute !important;
+        top: 100% !important;
+        bottom: auto !important;
+        left: 0 !important;
+        right: 0 !important;
+        max-height: min(240px, 42vh);
+        z-index: 900 !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
     .journey-card {
         padding: 14px !important;
     }
