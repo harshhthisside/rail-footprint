@@ -26,11 +26,6 @@ import {
 from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
 
-import {
-    deleteUser
-}
-from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
-
 
 // ==========================================
 
@@ -428,106 +423,23 @@ export async function loadUserJourneys(uid) {
 
 
 // ==========================================
-// Delete Complete User Account
+// Delete User Profile Document Only
+// (journeys + Auth account deleted by auth.js)
 // ==========================================
-
 
 export async function deleteUserProfile() {
 
-
     if (!auth.currentUser)
+        throw new Error("Please sign in first.");
 
-        throw new Error(
-            "Please sign in first."
-        );
+    const uid = auth.currentUser.uid;
+    const userRef = doc(db, "users", uid);
+    const snapshot = await getDoc(userRef);
 
-
-
-    const user =
-        auth.currentUser;
-
-
-
-    const uid =
-        user.uid;
-
-
-
-    try {
-
-
-        // ----------------------------------
-        // 1. Delete all user journeys
-        // ----------------------------------
-
-        await deleteAllJourneys();
-
-
-
-        // ----------------------------------
-        // 2. Delete Firestore user profile
-        // ----------------------------------
-
-        const userRef =
-            doc(
-
-                db,
-
-                "users",
-
-                uid
-
-            );
-
-
-
-        const snapshot =
-            await getDoc(userRef);
-
-
-
-        if (snapshot.exists()) {
-
-
-            await deleteDoc(
-                userRef
-            );
-
-
-        }
-
-
-
-        // ----------------------------------
-        // 3. Delete Firebase Auth account
-        // ----------------------------------
-
-        await deleteUser(
-            user
-        );
-
-
-
-        console.log(
-            "Account deleted successfully"
-        );
-
-
+    if (snapshot.exists()) {
+        await deleteDoc(userRef);
     }
 
-
-    catch(error) {
-
-
-        console.error(
-            "Account deletion failed:",
-            error
-        );
-
-
-        throw error;
-
-    }
-
+    console.log("User profile document deleted");
 
 }

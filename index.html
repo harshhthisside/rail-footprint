@@ -3,7 +3,9 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5, viewport-fit=cover">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>Rail Footprint</title>
 
     <!-- Leaflet -->
@@ -205,8 +207,9 @@
                             </div>
 
                             <div id="floatingButtons">
-                                <button id="locateBtn" title="My location">📍</button>
-                                <button id="fitIndiaBtn" title="Fit India">🇮🇳</button>
+                                <button id="locateBtn" title="My location" type="button">📍</button>
+                                <button id="fitIndiaBtn" title="Fit India" type="button">🇮🇳</button>
+                                <button id="downloadMapBtn" title="Download map with stats" type="button">⬇️</button>
                             </div>
 
                             <div id="floatingStats">
@@ -231,7 +234,7 @@
                         <div class="overview-card">
                             <div class="overview-icon blue">🇮🇳</div>
                             <div>
-                                <div class="overview-value"><span id="statStates">18</span> <span class="muted">/ 28</span></div>
+                                <div class="overview-value"><span id="statStates">0</span> <span class="muted">/ 28</span></div>
                                 <div class="overview-label">States Covered</div>
                             </div>
                         </div>
@@ -239,7 +242,7 @@
                         <div class="overview-card">
                             <div class="overview-icon violet">🗺️</div>
                             <div>
-                                <div class="overview-value"><span id="statZones">15</span> <span class="muted">/ 18</span></div>
+                                <div class="overview-value"><span id="statZones">0</span> <span class="muted">/ 18</span></div>
                                 <div class="overview-label">Zones Covered</div>
                             </div>
                         </div>
@@ -247,7 +250,7 @@
                         <div class="overview-card">
                             <div class="overview-icon emerald">🛤️</div>
                             <div>
-                                <div class="overview-value"><span id="statNetwork">62</span>%</div>
+                                <div class="overview-value"><span id="statNetwork">0</span>%</div>
                                 <div class="overview-label">Network Explored</div>
                             </div>
                         </div>
@@ -255,7 +258,7 @@
                         <div class="overview-card">
                             <div class="overview-icon amber">⏱️</div>
                             <div>
-                                <div class="overview-value"><span id="statTravelTime">742h 18m</span></div>
+                                <div class="overview-value"><span id="statTravelTime">0h</span></div>
                                 <div class="overview-label">Total Travel Time</div>
                             </div>
                         </div>
@@ -315,7 +318,7 @@
 
             <!-- ========== STATIONS VIEW (placeholder) ========== -->
             <section id="view-stations" class="view">
-                <div class="page-back-bar mobile-only-back">
+                <div class="page-back-bar">
                     <button type="button" class="page-back-btn" data-back-to="dashboard">← Back</button>
                 </div>
                 <div class="view-header">
@@ -329,7 +332,7 @@
 
             <!-- ========== ZONES VIEW (placeholder) ========== -->
             <section id="view-zones" class="view">
-                <div class="page-back-bar mobile-only-back">
+                <div class="page-back-bar">
                     <button type="button" class="page-back-btn" data-back-to="dashboard">← Back</button>
                 </div>
                 <div class="view-header">
@@ -343,7 +346,7 @@
 
             <!-- ========== GALLERY VIEW (placeholder) ========== -->
             <section id="view-gallery" class="view">
-                <div class="page-back-bar mobile-only-back">
+                <div class="page-back-bar">
                     <button type="button" class="page-back-btn" data-back-to="dashboard">← Back</button>
                 </div>
                 <div class="view-header">
@@ -357,7 +360,7 @@
 
             <!-- ========== ACHIEVEMENTS VIEW (placeholder) ========== -->
             <section id="view-achievements" class="view">
-                <div class="page-back-bar mobile-only-back">
+                <div class="page-back-bar">
                     <button type="button" class="page-back-btn" data-back-to="dashboard">← Back</button>
                 </div>
                 <div class="view-header">
@@ -371,6 +374,9 @@
 
             <!-- ========== EXPLORE VIEW ========== -->
             <section id="view-explore" class="view">
+                <div class="page-back-bar">
+                    <button type="button" class="page-back-btn" data-back-to="dashboard">← Back to Dashboard</button>
+                </div>
                 <div class="view-header">
                     <h2>🌍 Explore Rail Footprints</h2>
                     <p>Discover other explorers' railway journeys</p>
@@ -453,6 +459,9 @@
 
             <!-- ========== SETTINGS VIEW ========== -->
             <section id="view-settings" class="view">
+                <div class="page-back-bar">
+                    <button type="button" class="page-back-btn" data-back-to="dashboard">← Back to Dashboard</button>
+                </div>
                 <div class="view-header">
                     <h2>Settings</h2>
                     <p>Account and preferences</p>
@@ -461,14 +470,18 @@
                 <div class="glass-card" style="margin-bottom:24px;">
                     <h3 style="margin:0 0 12px;">Theme</h3>
                     <p style="color:var(--text-secondary); font-size:14px; margin:0 0 16px;">
-                        Switch between light and dark mode anytime using the moon button in the header.
+                        Choose light or dark appearance. You can also use the moon button in the header.
                     </p>
+                    <button type="button" id="settingsThemeToggle" class="theme-toggle-btn">
+                        <span class="theme-toggle-icon">🌙</span>
+                        <span class="theme-toggle-label">Switch to Dark Mode</span>
+                    </button>
                 </div>
 
                 <div class="glass-card danger-zone">
                     <h3 style="margin:0 0 12px; color:var(--danger);">Danger Zone</h3>
                     <p class="danger-note">These actions are permanent and cannot be undone.</p>
-                    <button id="deleteAccountBtn" class="danger-btn danger-outline">
+                    <button id="deleteAccountBtn" type="button" class="danger-btn danger-outline">
                         ❌ Delete My Account
                     </button>
                 </div>
@@ -479,6 +492,10 @@
     </div><!-- /main -->
 
 </div><!-- /app -->
+
+<!-- html2canvas + jsPDF for map export (PNG / PDF) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <!-- Leaflet -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

@@ -55,6 +55,10 @@ import {
     loadStatistics
 } from "./statistics.js";
 
+import {
+    initializeMapExport
+} from "./mapExport.js";
+
 
 
 
@@ -155,10 +159,14 @@ const deleteAccountBtn =
         "deleteAccountBtn"
     );
 
-deleteAccountBtn?.addEventListener(
-    "click",
-    deleteAccount
-);
+if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
+    deleteAccountBtn.dataset.bound = "1";
+    deleteAccountBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        deleteAccount();
+    });
+}
 
 
 
@@ -171,62 +179,41 @@ deleteAccountBtn?.addEventListener(
         // ==========================================
 
 
-        const savedTheme =
-            localStorage.getItem(
-                "theme"
-            );
+        const settingsThemeToggle =
+            document.getElementById("settingsThemeToggle");
 
-
-
-        if(savedTheme==="dark"){
-
-
-            document.body.classList.add(
-                "dark"
-            );
-
-
-            if(themeBtn)
-                themeBtn.textContent="☀️";
-
-
+        function syncThemeUI(dark) {
+            if (themeBtn) themeBtn.textContent = dark ? "☀️" : "🌙";
+            if (settingsThemeToggle) {
+                const icon = settingsThemeToggle.querySelector(".theme-toggle-icon");
+                const label = settingsThemeToggle.querySelector(".theme-toggle-label");
+                if (icon) icon.textContent = dark ? "☀️" : "🌙";
+                if (label) label.textContent = dark ? "Switch to Light Mode" : "Switch to Dark Mode";
+            }
         }
 
+        function setTheme(dark) {
+            document.body.classList.toggle("dark", !!dark);
+            localStorage.setItem("theme", dark ? "dark" : "light");
+            syncThemeUI(!!dark);
+        }
 
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme === "dark") {
+            document.body.classList.add("dark");
+            syncThemeUI(true);
+        } else {
+            syncThemeUI(false);
+        }
 
+        themeBtn?.addEventListener("click", () => {
+            setTheme(!document.body.classList.contains("dark"));
+        });
 
-        themeBtn?.addEventListener(
-            "click",
-            ()=>{
-
-
-                document.body.classList.toggle(
-                    "dark"
-                );
-
-
-
-                const dark =
-                document.body.classList.contains(
-                    "dark"
-                );
-
-
-
-                localStorage.setItem(
-                    "theme",
-                    dark ? "dark":"light"
-                );
-
-
-
-                themeBtn.textContent =
-                    dark ? "☀️":"🌙";
-
-
-
-            }
-        );
+        settingsThemeToggle?.addEventListener("click", (e) => {
+            e.preventDefault();
+            setTheme(!document.body.classList.contains("dark"));
+        });
 
 
 
@@ -241,6 +228,8 @@ deleteAccountBtn?.addEventListener(
 
 
         initializeMap();
+
+        initializeMapExport();
 
 
 

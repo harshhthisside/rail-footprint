@@ -467,8 +467,9 @@ body.dark #sidebar {
     box-shadow: var(--shadow-sm);
     display: flex;
     flex-direction: column;
-    min-height: 520px;
-    height: calc(100vh - 340px); /* header + quick overview + padding */
+    min-height: 560px;
+    /* Larger map area so India fills the view like production */
+    height: calc(100vh - 280px);
 }
 
 .map-header {
@@ -882,8 +883,8 @@ body.dark #sidebar {
 
 /* Map tall enough so full route network is in frame for screenshots */
 .map-wrapper {
-    min-height: 520px;
-    height: calc(100vh - 300px);
+    min-height: 540px;
+    height: calc(100vh - 250px);
 }
 
 #mapContainer {

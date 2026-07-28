@@ -29,25 +29,20 @@ import { loadStatistics } from "./statistics.js";
 
 const addJourneyBtn = document.getElementById("addJourneyBtn");
 const journeyList = document.getElementById("journeyList");
+
 const loadMoreBtn = document.createElement("button");
-
+loadMoreBtn.type = "button";
 loadMoreBtn.className = "load-more-journeys";
+loadMoreBtn.innerHTML = "🚆 Explore More Journeys";
 
-loadMoreBtn.innerHTML =
-    "🚆 Explore More Journeys";
-
-    const deleteAllBtn =
-    document.createElement("button");
-
-deleteAllBtn.className =
-    "delete-all-journeys";
-
-deleteAllBtn.innerHTML =
-    "🗑 Delete All Journeys";
+const deleteAllBtn = document.createElement("button");
+deleteAllBtn.type = "button";
+deleteAllBtn.className = "delete-all-journeys";
+deleteAllBtn.innerHTML = "🗑 Delete All Journeys";
 
 let initialized = false;
-
 let visibleJourneyCount = 8;
+let isBusy = false;
 
 // ==========================================
 // Edit Mode
@@ -58,67 +53,57 @@ let editingJourneyId = null;
 export function initializeJourneyManager() {
 
     if (initialized) return;
-
     initialized = true;
 
     renderJourneys();
 
-    addJourneyBtn.addEventListener("click", createJourney);
-    loadMoreBtn.addEventListener(
-    "click",
-    async ()=>{
+    if (addJourneyBtn) {
+        addJourneyBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            createJourney();
+        });
+    }
 
+    loadMoreBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         visibleJourneyCount += 8;
-
         await renderJourneys();
+    });
 
-    }
-);
+    const handleDeleteAll = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isBusy) return;
 
-deleteAllBtn.addEventListener(
-    "click",
-    async ()=>{
-
-        const confirmed = confirm(
-
+        const confirmed = window.confirm(
             "Delete ALL your journeys?\n\nThis action cannot be undone."
-
         );
+        if (!confirmed) return;
 
-        if(!confirmed)
-            return;
+        isBusy = true;
+        deleteAllBtn.disabled = true;
+        deleteAllBtn.textContent = "Deleting…";
 
-        try{
-
-            const deleted =
-                await deleteAllJourneys();
-
-            console.log(
-                `Deleted ${deleted} journeys`
-            );
-
+        try {
+            const deleted = await deleteAllJourneys();
+            console.log(`Deleted ${deleted} journeys`);
             visibleJourneyCount = 8;
-
             await renderJourneys();
-
             await loadStatistics();
-
-            alert(
-                "All journeys deleted successfully."
-            );
-
-        }
-
-        catch(error){
-
+            alert("All journeys deleted successfully.");
+        } catch (error) {
             console.error(error);
-
-            alert(error.message);
-
+            alert(error.message || "Failed to delete journeys.");
+        } finally {
+            isBusy = false;
+            deleteAllBtn.disabled = false;
+            deleteAllBtn.innerHTML = "🗑 Delete All Journeys";
         }
+    };
 
-    }
-);
+    deleteAllBtn.addEventListener("click", handleDeleteAll);
 
 }
 
@@ -128,15 +113,17 @@ deleteAllBtn.addEventListener(
 
 async function createJourney() {
 
+    if (isBusy) return;
+
     const origin = document.getElementById("originInput");
     const destination = document.getElementById("destinationInput");
 
-    if (!origin.dataset.name) {
+    if (!origin || !origin.dataset.name) {
         alert("Please select an Origin Station.");
         return;
     }
 
-    if (!destination.dataset.name) {
+    if (!destination || !destination.dataset.name) {
         alert("Please select a Destination Station.");
         return;
     }
@@ -147,113 +134,100 @@ async function createJourney() {
         name: origin.dataset.name,
         code: origin.dataset.code,
         lat: Number(origin.dataset.lat),
-        lon: Number(origin.dataset.lon)
+        lon: Number(origin.dataset.lon),
+        graph_node: origin.dataset.node !== "" ? Number(origin.dataset.node) : undefined
     });
 
     getIntermediateInputs().forEach(input => {
-
         if (input.dataset.name) {
-
             stops.push({
-
                 name: input.dataset.name,
                 code: input.dataset.code,
                 lat: Number(input.dataset.lat),
-                lon: Number(input.dataset.lon)
-
+                lon: Number(input.dataset.lon),
+                graph_node: input.dataset.node !== "" ? Number(input.dataset.node) : undefined
             });
-
         }
-
     });
 
     stops.push({
-
         name: destination.dataset.name,
         code: destination.dataset.code,
         lat: Number(destination.dataset.lat),
-        lon: Number(destination.dataset.lon)
-
+        lon: Number(destination.dataset.lon),
+        graph_node: destination.dataset.node !== "" ? Number(destination.dataset.node) : undefined
     });
+
+    for (let i = 1; i < stops.length; i++) {
+        if (
+            stops[i].code &&
+            stops[i - 1].code &&
+            stops[i].code === stops[i - 1].code
+        ) {
+            alert("Consecutive stations cannot be the same. Please check intermediate stops.");
+            return;
+        }
+    }
 
     console.table(stops);
 
-   const coordinates = calculateRoute(stops);
-
- const optimizedRoute = simplifyRoute(
-    coordinates,
-    2000
- );
-
-    if (!coordinates || coordinates.length === 0) {
-
-        alert("No railway route found.");
-
-        return;
-
+    isBusy = true;
+    if (addJourneyBtn) {
+        addJourneyBtn.disabled = true;
+        addJourneyBtn.textContent = "Calculating route…";
     }
-
-    // Optional user-provided travel time
-    const hoursEl = document.getElementById("durationHours");
-    const minsEl = document.getElementById("durationMinutes");
-    const hours = hoursEl ? parseInt(hoursEl.value, 10) || 0 : 0;
-    const mins = minsEl ? parseInt(minsEl.value, 10) || 0 : 0;
-    const durationMinutes = (hours * 60) + mins; // 0 means "not provided"
-
-    const journey = {
-
-        origin: stops[0],
-
-        destination: stops[stops.length - 1],
-
-        intermediates: stops.slice(1, -1),
-
-       route: optimizedRoute.map(point => ({
-     lat: point[0],
-     lon: point[1]
-      })),
-
-        durationMinutes: durationMinutes > 0 ? durationMinutes : null,
-
-        createdAt: Date.now()
-
-    };
 
     try {
+        const coordinates = calculateRoute(stops);
+        const optimizedRoute = simplifyRoute(coordinates, 2000);
 
-    if (editingJourneyId) {
+        if (!coordinates || coordinates.length === 0) {
+            alert("No railway route found between the selected stations.");
+            return;
+        }
 
-        await updateJourney(
-            editingJourneyId,
-            journey
-        );
+        const hoursEl = document.getElementById("durationHours");
+        const minsEl = document.getElementById("durationMinutes");
+        const hours = hoursEl ? parseInt(hoursEl.value, 10) || 0 : 0;
+        const mins = minsEl ? parseInt(minsEl.value, 10) || 0 : 0;
+        const durationMinutes = (hours * 60) + mins;
 
-        editingJourneyId = null;
+        const journey = {
+            origin: stops[0],
+            destination: stops[stops.length - 1],
+            intermediates: stops.slice(1, -1),
+            route: optimizedRoute.map(point => ({
+                lat: point[0],
+                lon: point[1]
+            })),
+            durationMinutes: durationMinutes > 0 ? durationMinutes : null,
+            createdAt: Date.now()
+        };
 
-        addJourneyBtn.innerHTML =
-            "🧳 Add Journey";
+        if (editingJourneyId) {
+            await updateJourney(editingJourneyId, journey);
+            editingJourneyId = null;
+            if (addJourneyBtn) addJourneyBtn.innerHTML = "🚆 Add Journey";
+        } else {
+            await saveJourney(journey);
+        }
 
+        await renderJourneys();
+        await loadStatistics();
+        resetJourneyForm();
+
+    } catch (err) {
+        console.error(err);
+        alert(err.message || "Failed to save journey.");
+    } finally {
+        isBusy = false;
+        if (addJourneyBtn) {
+            addJourneyBtn.disabled = false;
+            if (!editingJourneyId) {
+                addJourneyBtn.innerHTML = "🚆 Add Journey";
+            }
+        }
     }
-    else {
-
-        await saveJourney(journey);
-
-    }
-
-    await renderJourneys();
-
-await loadStatistics();
-
-resetJourneyForm();
-
-}
-catch (err) {
-
-    console.error(err);
-
-    alert(err.message);
-
-}
 
 }
 
@@ -263,309 +237,154 @@ catch (err) {
 
 export async function renderJourneys() {
 
-    const journeys = await loadJourneys();
+    if (!journeyList) return;
 
-    // Map always receives ALL journeys
+    let journeys = [];
+    try {
+        journeys = await loadJourneys();
+    } catch (err) {
+        console.error(err);
+        journeyList.innerHTML = "<p>Failed to load journeys. Please try again.</p>";
+        return;
+    }
+
     drawAllJourneys(journeys);
-
     await loadStatistics();
 
-
     if (!journeys.length) {
+        journeyList.innerHTML = "<p>No journeys added yet.</p>";
+        deleteAllBtn.remove();
+        loadMoreBtn.remove();
+        return;
+    }
 
-    journeyList.innerHTML =
-        "<p>No journeys added yet.</p>";
-
-    return;
-
-}
-
-// Remove old Delete All button
-deleteAllBtn.remove();
-
-
+    deleteAllBtn.remove();
+    loadMoreBtn.remove();
     journeyList.innerHTML = "";
 
-
-    const visibleJourneys =
-        journeys.slice(0, visibleJourneyCount);
-
-
+    const visibleJourneys = journeys.slice(0, visibleJourneyCount);
 
     visibleJourneys.forEach(journey => {
 
-
         const card = document.createElement("div");
-
         card.className = "journey-card";
-
+        card.dataset.journeyId = journey.id;
 
         const totalStations =
-            1 +
-            (journey.intermediates?.length || 0) +
-            1;
-
-
+            1 + (journey.intermediates?.length || 0) + 1;
 
         let timeline = "";
 
-
         timeline += `
-
             <div class="timeline-item">
-
-                <div class="station-name">
-                    ${journey.origin.name}
-                </div>
-
-                <div class="station-code">
-                    ${journey.origin.code}
-                </div>
-
+                <div class="station-name">${escapeHtml(journey.origin?.name || "?")}</div>
+                <div class="station-code">${escapeHtml(journey.origin?.code || "")}</div>
             </div>
-
         `;
-
-
 
         (journey.intermediates || []).forEach(stop => {
-
-
             timeline += `
-
                 <div class="timeline-item">
-
-                    <div class="station-name">
-                        ${stop.name}
-                    </div>
-
-                    <div class="station-code">
-                        ${stop.code}
-                    </div>
-
+                    <div class="station-name">${escapeHtml(stop.name || "?")}</div>
+                    <div class="station-code">${escapeHtml(stop.code || "")}</div>
                 </div>
-
             `;
-
-
         });
 
-
-
         timeline += `
-
             <div class="timeline-item">
-
-                <div class="station-name">
-                    ${journey.destination.name}
-                </div>
-
-                <div class="station-code">
-                    ${journey.destination.code}
-                </div>
-
+                <div class="station-name">${escapeHtml(journey.destination?.name || "?")}</div>
+                <div class="station-code">${escapeHtml(journey.destination?.code || "")}</div>
             </div>
-
         `;
-
-
 
         card.innerHTML = `
-
             <h3>
-                🚆 ${journey.origin.code}
+                🚆 ${escapeHtml(journey.origin?.code || "?")}
                 →
-                ${journey.destination.code}
+                ${escapeHtml(journey.destination?.code || "?")}
             </h3>
-
-
-
-
             <div class="journey-meta">
-
-                🚉 ${totalStations} Stations
-
+                <span>🚉 ${totalStations} Stations</span>
             </div>
-
-
-
-            <button class="expandRoute">
-
-                ▼ Expand Route
-
-            </button>
-
-
-
-            <div class="timeline hidden">
-
-                ${timeline}
-
-            </div>
-
-
-
+            <button type="button" class="expandRoute">▼ Expand Route</button>
+            <div class="timeline hidden">${timeline}</div>
             <div class="journey-actions">
-
-                <button class="editJourney">
-
-                    ✏ Edit
-
-                </button>
-
-
-
-                <button class="deleteJourney">
-
-                    🗑 Delete
-
-                </button>
-
+                <button type="button" class="editJourney">✏ Edit</button>
+                <button type="button" class="deleteJourney">🗑 Delete</button>
             </div>
-
         `;
 
+        const expandBtn = card.querySelector(".expandRoute");
+        const timelineBox = card.querySelector(".timeline");
 
+        expandBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            timelineBox.classList.toggle("hidden");
+            expandBtn.innerHTML = timelineBox.classList.contains("hidden")
+                ? "▼ Expand Route"
+                : "▲ Hide Route";
+        });
 
-        // Expand Route
+        card.addEventListener("click", (e) => {
+            if (e.target.closest("button")) return;
+            focusJourney(journey.id);
+        });
 
-        const expandBtn =
-            card.querySelector(".expandRoute");
+        card.querySelector(".editJourney").addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            loadJourneyForEditing(journey);
+        });
 
+        const delBtn = card.querySelector(".deleteJourney");
+        const doDelete = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (isBusy) return;
 
-        const timelineBox =
-            card.querySelector(".timeline");
+            if (!window.confirm("Delete this journey?")) return;
 
+            isBusy = true;
+            delBtn.disabled = true;
+            delBtn.textContent = "…";
 
-
-        expandBtn.addEventListener(
-            "click",
-            (e)=>{
-
-                e.stopPropagation();
-
-
-                timelineBox.classList.toggle(
-                    "hidden"
-                );
-
-
-                expandBtn.innerHTML =
-                    timelineBox.classList.contains("hidden")
-                    ?
-                    "▼ Expand Route"
-                    :
-                    "▲ Hide Route";
-
-
-            }
-        );
-
-
-
-        // Focus map
-
-        card.addEventListener(
-            "click",
-            ()=>{
-
-                focusJourney(journey.id);
-
-            }
-        );
-
-
-
-        // Edit
-
-        card.querySelector(".editJourney")
-        .addEventListener(
-            "click",
-            (e)=>{
-
-                e.stopPropagation();
-
-                loadJourneyForEditing(journey);
-
-            }
-        );
-
-
-
-        // Delete
-
-        card.querySelector(".deleteJourney")
-        .addEventListener(
-            "click",
-            async (e)=>{
-
-
-                e.stopPropagation();
-
-
-                if(
-                    !confirm(
-                        "Delete this journey?"
-                    )
-                )
-                return;
-
-
-
-                await removeJourney(
-                    journey.id
-                );
-
-
-                removeJourneyFromMap(
-                    journey.id
-                );
-
-
+            try {
+                await removeJourney(journey.id);
+                removeJourneyFromMap(journey.id);
                 visibleJourneyCount = 8;
-
-
                 await renderJourneys();
-
-
                 await loadStatistics();
-
-
+            } catch (err) {
+                console.error(err);
+                alert(err.message || "Failed to delete journey.");
+                delBtn.disabled = false;
+                delBtn.innerHTML = "🗑 Delete";
+            } finally {
+                isBusy = false;
             }
-        );
-
-
+        };
+        delBtn.addEventListener("click", doDelete);
 
         journeyList.appendChild(card);
-
-
     });
 
+    if (visibleJourneyCount < journeys.length) {
+        journeyList.appendChild(loadMoreBtn);
+    }
 
-
-    // Add button AFTER all cards
-
-    // Show Load More
-
-if (
-    visibleJourneyCount < journeys.length
-) {
-
-    journeyList.appendChild(
-        loadMoreBtn
-    );
-
+    journeyList.appendChild(deleteAllBtn);
 }
 
-
-// Show Delete All button
-
-journeyList.appendChild(
-    deleteAllBtn
-);
-
-
+function escapeHtml(str) {
+    return String(str ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
 }
+
 // ==========================================
 // Load Journey Into Editor
 // ==========================================
@@ -577,57 +396,54 @@ function loadJourneyForEditing(journey) {
     const origin = document.getElementById("originInput");
     const destination = document.getElementById("destinationInput");
 
-    // -----------------------------
-    // Origin
-    // -----------------------------
+    if (!origin || !destination) return;
 
-    origin.value =
-        `${journey.origin.name} (${journey.origin.code})`;
-
+    origin.value = `${journey.origin.name} (${journey.origin.code})`;
     origin.dataset.name = journey.origin.name;
     origin.dataset.code = journey.origin.code;
     origin.dataset.lat = journey.origin.lat;
     origin.dataset.lon = journey.origin.lon;
+    if (journey.origin.graph_node != null) {
+        origin.dataset.node = journey.origin.graph_node;
+    }
 
-    // -----------------------------
-    // Destination
-    // -----------------------------
-
-    destination.value =
-        `${journey.destination.name} (${journey.destination.code})`;
-
+    destination.value = `${journey.destination.name} (${journey.destination.code})`;
     destination.dataset.name = journey.destination.name;
     destination.dataset.code = journey.destination.code;
     destination.dataset.lat = journey.destination.lat;
     destination.dataset.lon = journey.destination.lon;
-
-    // -----------------------------
-    // Intermediate Stations
-    // -----------------------------
+    if (journey.destination.graph_node != null) {
+        destination.dataset.node = journey.destination.graph_node;
+    }
 
     clearIntermediateStations();
 
     (journey.intermediates || []).forEach(stop => {
-
         addIntermediateStation(stop);
-
     });
 
-    // -----------------------------
-    // Button
-    // -----------------------------
+    const hoursEl = document.getElementById("durationHours");
+    const minsEl = document.getElementById("durationMinutes");
+    if (journey.durationMinutes && journey.durationMinutes > 0) {
+        if (hoursEl) hoursEl.value = Math.floor(journey.durationMinutes / 60);
+        if (minsEl) minsEl.value = journey.durationMinutes % 60;
+    } else {
+        if (hoursEl) hoursEl.value = "";
+        if (minsEl) minsEl.value = "";
+    }
 
-    addJourneyBtn.innerHTML =
-        "💾 Save Changes";
+    if (addJourneyBtn) addJourneyBtn.innerHTML = "💾 Save Changes";
 
-    window.scrollTo({
-    top: 0,
-    behavior: "smooth"
-});
+    if (typeof window.switchView === "function") {
+        window.switchView("journeys");
+    }
 
-origin.focus();
-
+    setTimeout(() => {
+        origin.scrollIntoView({ behavior: "smooth", block: "center" });
+        origin.focus();
+    }, 200);
 }
+
 // ==========================================
 // Reset Journey Form
 // ==========================================
@@ -639,18 +455,23 @@ function resetJourneyForm() {
     const origin = document.getElementById("originInput");
     const destination = document.getElementById("destinationInput");
 
-    origin.value = "";
-    destination.value = "";
+    if (origin) {
+        origin.value = "";
+        origin.dataset.name = "";
+        origin.dataset.code = "";
+        origin.dataset.lat = "";
+        origin.dataset.lon = "";
+        origin.dataset.node = "";
+    }
 
-    origin.dataset.name = "";
-    origin.dataset.code = "";
-    origin.dataset.lat = "";
-    origin.dataset.lon = "";
-
-    destination.dataset.name = "";
-    destination.dataset.code = "";
-    destination.dataset.lat = "";
-    destination.dataset.lon = "";
+    if (destination) {
+        destination.value = "";
+        destination.dataset.name = "";
+        destination.dataset.code = "";
+        destination.dataset.lat = "";
+        destination.dataset.lon = "";
+        destination.dataset.node = "";
+    }
 
     clearIntermediateStations();
 
@@ -659,6 +480,6 @@ function resetJourneyForm() {
     if (hoursEl) hoursEl.value = "";
     if (minsEl) minsEl.value = "";
 
-    addJourneyBtn.innerHTML = "🚆 Add Journey";
+    if (addJourneyBtn) addJourneyBtn.innerHTML = "🚆 Add Journey";
 
 }

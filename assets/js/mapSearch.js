@@ -1,6 +1,6 @@
 // ==========================================
 // Rail Footprint
-// Header / Map Search (fast + reliable)
+// Header / Map Search (fast + reliable, mobile-safe)
 // ==========================================
 
 import { loadJourneys } from "./firestore.js";
@@ -12,7 +12,7 @@ let journeysCacheAt = 0;
 const CACHE_TTL_MS = 30_000;
 
 let debounceTimer = null;
-const DEBOUNCE_MS = 180;
+const DEBOUNCE_MS = 160;
 
 export async function initializeMapSearch() {
     try {
@@ -26,32 +26,66 @@ export async function initializeMapSearch() {
 
     const input = document.getElementById("mapSearchInput");
     const box = document.getElementById("mapSearchSuggestions");
+    const wrap = input?.closest(".header-search");
 
     if (!input || !box) return;
 
     box.classList.add("header-suggestions");
+
+    // Mobile: expand search when tapping the search area / icon
+    if (wrap) {
+        wrap.addEventListener("click", (e) => {
+            if (window.innerWidth > 768) return;
+            wrap.classList.add("expanded");
+            if (e.target !== input) {
+                input.focus();
+            }
+        });
+        input.addEventListener("focus", () => wrap.classList.add("expanded"));
+        input.addEventListener("blur", () => {
+            setTimeout(() => {
+                if (!box.innerHTML.trim()) {
+                    wrap.classList.remove("expanded");
+                }
+            }, 200);
+        });
+    }
 
     input.addEventListener("input", () => {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => runSearch(input, box), DEBOUNCE_MS);
     });
 
+    // Touch-friendly: also handle input on mobile
+    input.addEventListener("search", () => runSearch(input, box));
+
     input.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
             box.innerHTML = "";
             input.blur();
+            wrap?.classList.remove("expanded");
         }
         if (e.key === "Enter") {
-            const first = box.querySelector(".station-item");
+            e.preventDefault();
+            const first = box.querySelector(".station-item:not(.muted)");
             if (first) first.click();
         }
     });
 
     document.addEventListener("click", (e) => {
-        if (!input.contains(e.target) && !box.contains(e.target)) {
+        if (!input.contains(e.target) && !box.contains(e.target) && !(wrap && wrap.contains(e.target))) {
             box.innerHTML = "";
+            wrap?.classList.remove("expanded");
         }
     });
+
+    // Close on outside touch
+    document.addEventListener("touchstart", (e) => {
+        if (!input.contains(e.target) && !box.contains(e.target) && !(wrap && wrap.contains(e.target))) {
+            box.innerHTML = "";
+            wrap?.classList.remove("expanded");
+        }
+    }, { passive: true });
 
     refreshJourneysCache().catch(() => {});
 }
@@ -74,7 +108,8 @@ async function runSearch(input, box) {
     const query = input.value.trim().toLowerCase();
     box.innerHTML = "";
 
-    if (query.length < 2) return;
+    if (query.length < 1) return;
+    if (query.length < 2 && !/^[a-z]{1,4}$/i.test(query)) return;
 
     const stationResults = stations
         .filter((s) => {
@@ -83,7 +118,7 @@ async function runSearch(input, box) {
             return name.includes(query) || code.includes(query);
         })
         .sort((a, b) => rankStation(a, query) - rankStation(b, query))
-        .slice(0, 6);
+        .slice(0, 8);
 
     stationResults.forEach((station) => {
         createResult(
@@ -96,6 +131,7 @@ async function runSearch(input, box) {
                     ? `${station.name} (${station.code})`
                     : station.name;
                 box.innerHTML = "";
+                input.closest(".header-search")?.classList.remove("expanded");
             }
         );
     });
@@ -122,6 +158,7 @@ async function runSearch(input, box) {
             focusJourney(journey.id);
             input.value = `${journey.origin?.code || "?"} → ${journey.destination?.code || "?"}`;
             box.innerHTML = "";
+            input.closest(".header-search")?.classList.remove("expanded");
         });
     });
 
@@ -147,6 +184,15 @@ function createResult(container, text, action) {
     const div = document.createElement("div");
     div.className = "station-item";
     div.textContent = text;
-    div.onclick = action;
+    div.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        action();
+    };
+    // Touch reliability
+    div.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        action();
+    }, { passive: false });
     container.appendChild(div);
 }

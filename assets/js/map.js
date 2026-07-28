@@ -51,6 +51,16 @@ const INDIA_BOUNDS = L.latLngBounds(
 
 );
 
+function mapAnimOptions(extra = {}) {
+    const mobile = typeof window !== "undefined" && window.innerWidth <= 768;
+    return {
+        animate: !mobile,
+        duration: mobile ? 0 : 0.8,
+        ...extra
+    };
+}
+
+
 
 
 
@@ -62,21 +72,33 @@ const INDIA_BOUNDS = L.latLngBounds(
 export function initializeMap(){
 
 
+    const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
+
     map = L.map("map",{
 
         zoomControl:false,
 
         preferCanvas:true,
 
-        zoomSnap:0.25,
+        renderer: L.canvas({ padding: 0.5 }),
+
+        zoomSnap: isMobile ? 0.5 : 0.25,
+
+        zoomDelta: isMobile ? 0.5 : 0.5,
+
+        wheelPxPerZoomLevel: isMobile ? 80 : 60,
 
         minZoom:4,
 
-        maxZoom:18,
+        maxZoom: isMobile ? 16 : 18,
 
         maxBounds:INDIA_BOUNDS,
 
-        maxBoundsViscosity:0.8
+        maxBoundsViscosity:0.85,
+
+        fadeAnimation: !isMobile,
+
+        markerZoomAnimation: !isMobile
 
     });
 
@@ -86,8 +108,8 @@ export function initializeMap(){
 
 
     map.setView(
-        [22.5, 82.0],
-        5.0
+        [22.0, 80.0],
+        5.2
     );
 
 
@@ -135,19 +157,23 @@ export function initializeMap(){
 
     // Wire floating controls (Fit India + Locate)
     document.getElementById("fitIndiaBtn")?.addEventListener("click", () => {
-        // Prefer fitting all drawn journey routes (best for screenshots)
+        // Full India frame — tight so routes fill the view (like production map)
+        const india = L.latLngBounds([7.5, 68.5], [35.5, 97.0]);
         if (journeyLayers.size > 0) {
-            const group = L.featureGroup(
-                Array.from(journeyLayers.values()).map(l => l.main)
-            );
-            map.fitBounds(group.getBounds().pad(0.08), {
-                padding: [40, 40],
-                maxZoom: 6,
-                animate: true
-            });
-        } else {
-            map.fitBounds(INDIA_BOUNDS, { padding: [24, 24], maxZoom: 5.5, animate: true });
+            try {
+                const group = L.featureGroup(
+                    Array.from(journeyLayers.values()).map(l => l.main)
+                );
+                const jb = group.getBounds();
+                if (jb.isValid()) india.extend(jb);
+            } catch (_) {}
         }
+        const mobile = window.innerWidth <= 768;
+        map.fitBounds(india, {
+            padding: mobile ? [10, 10] : [16, 16],
+            maxZoom: mobile ? 5.4 : 5.8,
+            animate: !mobile
+        });
     });
 
     document.getElementById("locateBtn")?.addEventListener("click", () => {
@@ -163,6 +189,8 @@ export function initializeMap(){
         );
     });
 
+    initializeMapFilters();
+
 }
 
 
@@ -173,6 +201,7 @@ export function initializeMap(){
 // Refresh Map
 // ==========================================
 
+let _refreshTimer = null;
 export function refreshMap(){
 
 
@@ -180,13 +209,19 @@ export function refreshMap(){
         return;
 
 
-    setTimeout(()=>{
+    if (_refreshTimer) clearTimeout(_refreshTimer);
+    _refreshTimer = setTimeout(()=>{
 
         map.invalidateSize(true);
+        _refreshTimer = null;
 
-    },300);
+    }, isMobileViewport() ? 180 : 280);
 
 
+}
+
+function isMobileViewport() {
+    return typeof window !== "undefined" && window.innerWidth <= 768;
 }
 
 
@@ -339,11 +374,11 @@ export function showStation(
 
         {
 
-            radius:7,
+            radius:5,
 
             color:"#2563eb",
 
-            weight:2,
+            weight:1.5,
 
             fillColor:"#ffffff",
 
@@ -406,11 +441,11 @@ function addJourneyStations(
     const markerStyle = {
 
 
-        radius:7,
+        radius:5,
 
         color:"#2563eb",
 
-        weight:2,
+        weight:1.5,
 
         fillColor:"#ffffff",
 
@@ -547,13 +582,15 @@ export function drawJourney(
 
             color,
 
-            weight:10,
+            weight:6,
 
-            opacity:0.18,
+            opacity:0.16,
 
             lineCap:"round",
 
-            lineJoin:"round"
+            lineJoin:"round",
+
+            interactive:false
 
         }
 
@@ -575,7 +612,7 @@ export function drawJourney(
 
             color,
 
-            weight:5,
+            weight:3.25,
 
             opacity:0.92,
 
@@ -710,13 +747,15 @@ export function drawAllJourneys(journeys){
 
                     color,
 
-                    weight:10,
+                    weight:6,
 
-                    opacity:0.18,
+                    opacity:0.16,
 
                     lineCap:"round",
 
-                    lineJoin:"round"
+                    lineJoin:"round",
+
+                    interactive:false
 
                 }
 
@@ -738,7 +777,7 @@ export function drawAllJourneys(journeys){
 
                     color,
 
-                    weight:5,
+                    weight:3.25,
 
                     opacity:0.92,
 
@@ -809,14 +848,18 @@ export function drawAllJourneys(journeys){
     if(bounds.length){
 
 
-        map.fitBounds(
-            bounds,
-            {
-                padding: [48, 48],
-                maxZoom: 6,
-                animate: true
-            }
-        );
+        // Fit so India + routes fill the map (same framing as production)
+        const india = L.latLngBounds([7.5, 68.5], [35.5, 97.0]);
+        try {
+            const routeBounds = L.latLngBounds(bounds);
+            if (routeBounds.isValid()) india.extend(routeBounds);
+        } catch (_) {}
+        const mobile = window.innerWidth <= 768;
+        map.fitBounds(india, {
+            padding: mobile ? [12, 12] : [18, 18],
+            maxZoom: mobile ? 5.4 : 5.8,
+            animate: !mobile
+        });
 
 
     }
@@ -824,7 +867,7 @@ export function drawAllJourneys(journeys){
     else{
 
 
-        map.setView([22.5, 82.0], 5.0);
+        map.setView([22.0, 80.0], 5.2);
 
 
     }
@@ -1023,13 +1066,15 @@ export function drawUserFootprint(journeys){
 
                 color,
 
-                weight:8,
+                weight:5,
 
                 opacity:0.12,
 
                 lineCap:"round",
 
-                lineJoin:"round"
+                lineJoin:"round",
+
+                interactive:false
 
             }
 
@@ -1050,7 +1095,7 @@ export function drawUserFootprint(journeys){
 
                 color,
 
-                weight:4,
+                weight:2.75,
 
                 opacity:0.88,
 
@@ -1110,17 +1155,186 @@ export function drawUserFootprint(journeys){
     if(bounds.length){
 
 
-        map.fitBounds(
-            bounds,
-            {
-                padding: [48, 48],
-                maxZoom: 6,
-                animate: true
-            }
-        );
+        const india = L.latLngBounds([7.5, 68.5], [35.5, 97.0]);
+        try {
+            const routeBounds = L.latLngBounds(bounds);
+            if (routeBounds.isValid()) india.extend(routeBounds);
+        } catch (_) {}
+        const mobile = window.innerWidth <= 768;
+        map.fitBounds(india, {
+            padding: mobile ? [12, 12] : [18, 18],
+            maxZoom: mobile ? 5.4 : 5.8,
+            animate: !mobile
+        });
 
 
     }
 
 
+}
+
+
+// ==========================================
+// Export: collect all journey polylines as latlng arrays
+// ==========================================
+
+export function getExportRoutes() {
+    const routes = [];
+    journeyLayers.forEach((layer, id) => {
+        try {
+            if (layer.main && typeof layer.main.getLatLngs === "function") {
+                const ll = layer.main.getLatLngs();
+                const pts = (Array.isArray(ll[0]) ? ll.flat() : ll).map(p => [p.lat, p.lng]);
+                if (pts.length >= 2) {
+                    const color = (layer.main.options && layer.main.options.color) || "#3b82f6";
+                    routes.push({ id, color, points: pts });
+                }
+            }
+        } catch (_) {}
+    });
+    return routes;
+}
+
+export function hideStationDotsForExport() {
+    stationDots.forEach(dot => {
+        if (dot.origin) try { map.removeLayer(dot.origin); } catch (_) {}
+        if (dot.destination) try { map.removeLayer(dot.destination); } catch (_) {}
+    });
+    if (typeof stationMarker !== "undefined" && stationMarker) {
+        try { map.removeLayer(stationMarker); } catch (_) {}
+    }
+}
+
+export function restoreStationDotsAfterExport() {
+    stationDots.forEach(dot => {
+        if (dot.origin) try { dot.origin.addTo(map); } catch (_) {}
+        if (dot.destination) try { dot.destination.addTo(map); } catch (_) {}
+    });
+}
+
+
+// ==========================================
+// Map Filters (journey visibility)
+// ==========================================
+
+const filterState = {
+    showRoutes: true,
+    showDots: true,
+    showGlow: true
+};
+
+export function initializeMapFilters() {
+    const btn = document.getElementById("mapFiltersBtn");
+    if (!btn || btn.dataset.bound === "1") return;
+    btn.dataset.bound = "1";
+
+    btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openFiltersPanel(btn);
+    });
+}
+
+function openFiltersPanel(anchor) {
+    document.getElementById("mapFiltersPanel")?.remove();
+
+    const panel = document.createElement("div");
+    panel.id = "mapFiltersPanel";
+    panel.className = "map-filters-panel";
+    panel.innerHTML = `
+        <div class="map-filters-title">Map Filters</div>
+        <label class="map-filter-row">
+            <input type="checkbox" id="fltRoutes" ${filterState.showRoutes ? "checked" : ""}>
+            <span>Show routes</span>
+        </label>
+        <label class="map-filter-row">
+            <input type="checkbox" id="fltGlow" ${filterState.showGlow ? "checked" : ""}>
+            <span>Soft route glow</span>
+        </label>
+        <label class="map-filter-row">
+            <input type="checkbox" id="fltDots" ${filterState.showDots ? "checked" : ""}>
+            <span>Station markers</span>
+        </label>
+        <button type="button" class="map-filter-apply" id="fltFitRoutes">Fit all routes</button>
+        <button type="button" class="map-filter-close" id="fltClose">Close</button>
+    `;
+
+    const wrap = document.querySelector(".map-wrapper") || document.body;
+    wrap.appendChild(panel);
+
+    panel.querySelector("#fltRoutes").addEventListener("change", (e) => {
+        filterState.showRoutes = e.target.checked;
+        applyFilters();
+    });
+    panel.querySelector("#fltGlow").addEventListener("change", (e) => {
+        filterState.showGlow = e.target.checked;
+        applyFilters();
+    });
+    panel.querySelector("#fltDots").addEventListener("change", (e) => {
+        filterState.showDots = e.target.checked;
+        applyFilters();
+    });
+    panel.querySelector("#fltFitRoutes").addEventListener("click", () => {
+        try {
+            const layers = [];
+            journeyLayers.forEach((l) => {
+                if (l.main) layers.push(l.main);
+            });
+            if (layers.length && map) {
+                const b = L.featureGroup(layers).getBounds();
+                if (b.isValid()) {
+                    const mobile = window.innerWidth <= 768;
+                    map.fitBounds(b.pad(0.08), {
+                        padding: mobile ? [12, 12] : [24, 24],
+                        maxZoom: 8,
+                        animate: !mobile
+                    });
+                }
+            }
+        } catch (_) {}
+    });
+    panel.querySelector("#fltClose").addEventListener("click", () => panel.remove());
+
+    const onDoc = (ev) => {
+        if (!panel.contains(ev.target) && ev.target !== anchor) {
+            panel.remove();
+            document.removeEventListener("click", onDoc);
+        }
+    };
+    setTimeout(() => document.addEventListener("click", onDoc), 0);
+}
+
+function applyFilters() {
+    if (!map) return;
+    journeyLayers.forEach((layer) => {
+        try {
+            if (layer.main) {
+                if (filterState.showRoutes) {
+                    if (!map.hasLayer(layer.main)) layer.main.addTo(map);
+                } else if (map.hasLayer(layer.main)) {
+                    map.removeLayer(layer.main);
+                }
+            }
+            if (layer.glow) {
+                if (filterState.showRoutes && filterState.showGlow) {
+                    if (!map.hasLayer(layer.glow)) layer.glow.addTo(map);
+                } else if (map.hasLayer(layer.glow)) {
+                    map.removeLayer(layer.glow);
+                }
+            }
+        } catch (_) {}
+    });
+    stationDots.forEach((dot) => {
+        try {
+            ["origin", "destination"].forEach((k) => {
+                const m = dot[k];
+                if (!m) return;
+                if (filterState.showDots) {
+                    if (!map.hasLayer(m)) m.addTo(map);
+                } else if (map.hasLayer(m)) {
+                    map.removeLayer(m);
+                }
+            });
+        } catch (_) {}
+    });
 }

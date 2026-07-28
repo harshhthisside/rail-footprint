@@ -110,6 +110,11 @@ function searchStations(query, container, input) {
 
     container.innerHTML = "";
 
+    // Close other open suggestion dropdowns (important for multiple intermediates)
+    document.querySelectorAll(".suggestions").forEach(box => {
+        if (box !== container) box.innerHTML = "";
+    });
+
     query = query.trim().toLowerCase();
 
     if (query.length < 2) return;

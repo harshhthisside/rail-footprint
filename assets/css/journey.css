@@ -495,3 +495,50 @@ body.dark .danger-outline:hover{
     color:#111827;
 
 }
+/* ==========================================
+   Touch / mobile reliability for actions
+========================================== */
+
+.editJourney,
+.deleteJourney,
+.expandRoute,
+.load-more-journeys,
+.delete-all-journeys,
+.danger-btn,
+#deleteAccountBtn {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    position: relative;
+    z-index: 5;
+}
+
+.journey-actions {
+    position: relative;
+    z-index: 6;
+}
+
+.journey-card button {
+    pointer-events: auto !important;
+}
+
+@media (max-width: 768px) {
+    .editJourney,
+    .deleteJourney {
+        min-height: 48px;
+        font-size: 15px;
+        padding: 14px;
+    }
+
+    .delete-all-journeys,
+    .load-more-journeys {
+        min-height: 50px;
+        font-size: 15px;
+    }
+
+    .danger-btn,
+    #deleteAccountBtn {
+        min-height: 52px;
+        font-size: 15px;
+    }
+}

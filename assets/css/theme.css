@@ -275,3 +275,180 @@ select{
     }
 
 }
+/* ==========================================
+   MAP EXPORT DIALOG
+========================================== */
+
+#exportThemeDialog {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.export-dialog-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+.export-dialog-card {
+    position: relative;
+    width: min(420px, 100%);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 24px;
+    box-shadow: var(--shadow-lg);
+    color: var(--text);
+}
+
+.export-dialog-card h3 {
+    margin: 0 0 6px;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.export-dialog-card > p {
+    margin: 0 0 18px;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.export-theme-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.export-theme-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 14px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: var(--background);
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    transition: .2s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.export-theme-btn:hover,
+.export-theme-btn:active {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.export-theme-btn span:not(.export-theme-preview) {
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.export-theme-btn small {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.export-theme-preview {
+    width: 100%;
+    height: 48px;
+    border-radius: 10px;
+    margin-bottom: 4px;
+}
+
+.export-theme-preview.dark-preview {
+    background: linear-gradient(135deg, #0b1220 0%, #1e3a8a 50%, #0f172a 100%);
+}
+
+.export-theme-preview.light-preview {
+    background: linear-gradient(135deg, #eef4fb 0%, #93c5fd 50%, #f8fafc 100%);
+}
+
+.export-format-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    color: var(--text);
+}
+
+.export-format-row label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.export-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.export-cancel {
+    padding: 10px 18px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--background);
+    color: var(--text);
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+@media (max-width: 480px) {
+    .export-theme-options {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ==========================================
+   SETTINGS THEME TOGGLE
+========================================== */
+
+.theme-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    max-width: 360px;
+    padding: 14px 18px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--background);
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.theme-toggle-btn:hover {
+    border-color: var(--primary);
+    background: rgba(37, 99, 235, 0.08);
+}
+
+.theme-toggle-btn:active {
+    transform: scale(0.98);
+}
+
+.theme-toggle-icon {
+    font-size: 20px;
+    width: 28px;
+    text-align: center;
+}
+
+body.dark .theme-toggle-btn {
+    background: rgba(255, 255, 255, 0.06);
+}
