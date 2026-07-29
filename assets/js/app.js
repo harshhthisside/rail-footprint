@@ -70,6 +70,15 @@ import {
     updateAdminVisibility
 } from "./admin.js";
 
+import {
+    initializeStationsPage
+} from "./stationsPage.js";
+
+import {
+    getUserProfile,
+    updateDisplayName
+} from "./firestore.js";
+
 
 
 
@@ -187,52 +196,199 @@ if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
 
 
         // ==========================================
-        // Theme
+        // Theme (light | dark | ocean)
         // ==========================================
 
-
+        const THEME_CYCLE = ["light", "dark", "ocean"];
         const settingsThemeToggle =
             document.getElementById("settingsThemeToggle");
 
-        function syncThemeUI(dark) {
-            if (themeBtn) themeBtn.textContent = dark ? "☀️" : "🌙";
+        function currentTheme() {
+            if (document.body.classList.contains("ocean")) return "ocean";
+            if (document.body.classList.contains("dark")) return "dark";
+            return "light";
+        }
+
+        function syncThemeUI(theme) {
+            const icons = { light: "☀️", dark: "🌙", ocean: "🌊" };
+            const labels = {
+                light: "Light mode",
+                dark: "Dark mode",
+                ocean: "Ocean mode"
+            };
+            if (themeBtn) themeBtn.textContent = icons[theme] || "🌙";
             if (settingsThemeToggle) {
                 const icon = settingsThemeToggle.querySelector(".theme-toggle-icon");
                 const label = settingsThemeToggle.querySelector(".theme-toggle-label");
-                if (icon) icon.textContent = dark ? "☀️" : "🌙";
-                if (label) label.textContent = dark ? "Switch to Light Mode" : "Switch to Dark Mode";
+                if (icon) icon.textContent = icons[theme] || "🌙";
+                if (label) label.textContent = `Theme: ${labels[theme] || theme} (tap to cycle)`;
             }
+            document.querySelectorAll(".theme-option").forEach((btn) => {
+                const on = btn.dataset.theme === theme;
+                btn.setAttribute("aria-pressed", on ? "true" : "false");
+                btn.classList.toggle("active", on);
+            });
         }
 
-        function setTheme(dark) {
-            document.body.classList.toggle("dark", !!dark);
-            localStorage.setItem("theme", dark ? "dark" : "light");
-            syncThemeUI(!!dark);
+        function setTheme(theme) {
+            const t = THEME_CYCLE.includes(theme) ? theme : "light";
+            document.body.classList.remove("dark", "ocean");
+            if (t === "dark") document.body.classList.add("dark");
+            if (t === "ocean") document.body.classList.add("ocean");
+            localStorage.setItem("theme", t);
+            syncThemeUI(t);
+        }
+
+        function cycleTheme() {
+            const i = THEME_CYCLE.indexOf(currentTheme());
+            setTheme(THEME_CYCLE[(i + 1) % THEME_CYCLE.length]);
         }
 
         const savedTheme = localStorage.getItem("theme");
-        if (savedTheme === "dark") {
-            document.body.classList.add("dark");
-            syncThemeUI(true);
+        if (savedTheme === "dark" || savedTheme === "ocean" || savedTheme === "light") {
+            setTheme(savedTheme);
         } else {
-            syncThemeUI(false);
+            setTheme("light");
         }
 
-        themeBtn?.addEventListener("click", () => {
-            setTheme(!document.body.classList.contains("dark"));
-        });
+        themeBtn?.addEventListener("click", () => cycleTheme());
 
         settingsThemeToggle?.addEventListener("click", (e) => {
             e.preventDefault();
-            setTheme(!document.body.classList.contains("dark"));
+            cycleTheme();
         });
 
+        document.getElementById("themePicker")?.addEventListener("click", (e) => {
+            const btn = e.target.closest(".theme-option");
+            if (!btn) return;
+            e.preventDefault();
+            setTheme(btn.dataset.theme);
+        });
+
+        // Display name (custom)
+        const saveNameBtn = document.getElementById("saveDisplayNameBtn");
+        const nameInput = document.getElementById("settingsDisplayName");
+        const nameStatus = document.getElementById("displayNameStatus");
+        saveNameBtn?.addEventListener("click", async (e) => {
+            e.preventDefault();
+            if (!nameInput) return;
+            try {
+                const cleaned = await updateDisplayName(nameInput.value);
+                if (nameStatus) {
+                    nameStatus.textContent = "Name saved.";
+                    nameStatus.style.color = "var(--success, #22c55e)";
+                }
+                const userNameEl = document.getElementById("userName");
+                if (userNameEl) userNameEl.textContent = cleaned;
+                if (typeof window.updateGreeting === "function") {
+                    window.updateGreeting(cleaned);
+                }
+            } catch (err) {
+                if (nameStatus) {
+                    nameStatus.textContent = err.message || "Could not save name.";
+                    nameStatus.style.color = "#ef4444";
+                }
+            }
+        });
+
+        window.loadProfileIntoSettings = async function loadProfileIntoSettings() {
+            try {
+                const profile = await getUserProfile();
+                const authUser = (await import("./firebase.js")).auth.currentUser;
+                const name =
+                    (profile && profile.name) ||
+                    (authUser && authUser.displayName) ||
+                    "";
+                if (nameInput) nameInput.value = name;
+            } catch (_) {}
+        };
 
 
 
 
 
 
+
+
+        
+        // ==========================================
+        // User preferences (local device)
+        // ==========================================
+
+        const PREF_KEYS = {
+            reduceMotion: "pref_reduceMotion",
+            compactCards: "pref_compactCards",
+            hideFloating: "pref_hideFloatingStats",
+            confirmDelete: "pref_confirmDelete",
+            defaultView: "pref_defaultView"
+        };
+
+        function readPref(key, fallback) {
+            try {
+                const v = localStorage.getItem(key);
+                if (v === null || v === undefined) return fallback;
+                if (v === "true") return true;
+                if (v === "false") return false;
+                return v;
+            } catch (_) {
+                return fallback;
+            }
+        }
+
+        function writePref(key, value) {
+            try {
+                localStorage.setItem(key, String(value));
+            } catch (_) {}
+        }
+
+        function applyPreferences() {
+            const reduce = !!readPref(PREF_KEYS.reduceMotion, false);
+            const compact = !!readPref(PREF_KEYS.compactCards, false);
+            const hideFloat = !!readPref(PREF_KEYS.hideFloating, false);
+            document.body.classList.toggle("reduce-motion", reduce);
+            document.body.classList.toggle("compact-cards", compact);
+            const fs = document.getElementById("floatingStats");
+            if (fs) fs.style.display = hideFloat ? "none" : "";
+            window.__prefConfirmDelete = readPref(PREF_KEYS.confirmDelete, true) !== false && readPref(PREF_KEYS.confirmDelete, "true") !== "false";
+            if (typeof readPref(PREF_KEYS.confirmDelete, true) === "boolean") {
+                window.__prefConfirmDelete = readPref(PREF_KEYS.confirmDelete, true);
+            } else {
+                window.__prefConfirmDelete = readPref(PREF_KEYS.confirmDelete, "true") !== "false";
+            }
+        }
+
+        function bindPreferenceControls() {
+            const map = [
+                ["prefReduceMotion", PREF_KEYS.reduceMotion, false],
+                ["prefCompactCards", PREF_KEYS.compactCards, false],
+                ["prefHideFloatingStats", PREF_KEYS.hideFloating, false],
+                ["prefConfirmDelete", PREF_KEYS.confirmDelete, true]
+            ];
+            map.forEach(([id, key, def]) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.checked = !!readPref(key, def);
+                el.addEventListener("change", () => {
+                    writePref(key, el.checked);
+                    applyPreferences();
+                    const st = document.getElementById("prefsStatus");
+                    if (st) st.textContent = "Preference saved.";
+                });
+            });
+            const viewSel = document.getElementById("prefDefaultView");
+            if (viewSel) {
+                viewSel.value = readPref(PREF_KEYS.defaultView, "dashboard") || "dashboard";
+                viewSel.addEventListener("change", () => {
+                    writePref(PREF_KEYS.defaultView, viewSel.value);
+                    const st = document.getElementById("prefsStatus");
+                    if (st) st.textContent = "Default screen saved.";
+                });
+            }
+            window.__getDefaultView = () => readPref(PREF_KEYS.defaultView, "dashboard") || "dashboard";
+        }
+
+        applyPreferences();
+        bindPreferenceControls();
 
         // ==========================================
         // Map
@@ -244,6 +400,13 @@ if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
         initializeMapExport();
 
         initializeZonesPage();
+        initializeStationsPage();
+        window.refreshPlannerMapSize = refreshPlannerMapSize;
+
+        document.getElementById("goToAddJourneyBtn")?.addEventListener("click", (e) => {
+            e.preventDefault();
+            if (typeof window.switchView === "function") window.switchView("add-journey");
+        });
         initializeAdminPanel();
         window.updateAdminVisibility = updateAdminVisibility;
         window.renderZonesPage = renderZonesPage;
@@ -439,13 +602,20 @@ if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
 
 
 
-                    userName.textContent =
-                        user.displayName ||
-                        "Rail Explorer";
+                    // Prefer custom profile name from Firestore; keep Google photo
+                    let shownName = user.displayName || "Rail Explorer";
+                    try {
+                        const profile = await getUserProfile();
+                        if (profile && profile.name) shownName = profile.name;
+                    } catch (_) {}
 
-                    // Refresh header greeting with first name
+                    userName.textContent = shownName;
+
                     if (typeof window.updateGreeting === "function") {
-                        window.updateGreeting();
+                        window.updateGreeting(shownName);
+                    }
+                    if (typeof window.loadProfileIntoSettings === "function") {
+                        window.loadProfileIntoSettings();
                     }
 
 
@@ -456,7 +626,7 @@ if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
 
                     profileImage.src =
                     user.photoURL ||
-                    `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || "User")}&background=0f766e&color=fff`;
+                    `https://ui-avatars.com/api/?name=${encodeURIComponent(shownName || "User")}&background=0f766e&color=fff`;
 
 
 
@@ -498,6 +668,16 @@ if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
 
 
                         await loadStatistics();
+
+                        // Honour default landing screen (Settings → Preferences)
+                        try {
+                            const dv = typeof window.__getDefaultView === "function"
+                                ? window.__getDefaultView()
+                                : "dashboard";
+                            if (dv && dv !== "dashboard" && typeof window.switchView === "function") {
+                                setTimeout(() => window.switchView(dv), 120);
+                            }
+                        } catch (_) {}
 
 
                     }

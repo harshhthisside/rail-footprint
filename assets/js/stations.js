@@ -8,6 +8,15 @@ import { findNearestNode } from "./routing.js";
 
 let stations = [];
 
+const CODE_ALIASES = { SRNG: "SANG", SRANG: "SANG", CSTM: "CSMT" };
+function expandSearchQuery(q) {
+    const t = String(q || "").trim().toLowerCase();
+    const up = t.toUpperCase();
+    const alias = CODE_ALIASES[up];
+    return alias ? [t, alias.toLowerCase()] : [t];
+}
+
+
 let originInput;
 let destinationInput;
 
@@ -142,11 +151,9 @@ function searchStations(query, container, input) {
 
             const name = (station.name || "").toLowerCase();
             const code = (station.code || "").toLowerCase();
+            const terms = expandSearchQuery(query);
 
-            return (
-                name.includes(query) ||
-                code.includes(query)
-            );
+            return terms.some((term) => name.includes(term) || code.includes(term));
 
         })
 

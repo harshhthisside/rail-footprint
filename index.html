@@ -50,7 +50,11 @@
             </a>
             <a href="#" class="nav-item" data-view="journeys">
                 <span class="nav-icon">🚆</span>
-                <span>Journeys</span>
+                <span>My Journeys</span>
+            </a>
+            <a href="#" class="nav-item" data-view="add-journey">
+                <span class="nav-icon">➕</span>
+                <span>Add Journey</span>
             </a>
             <a href="#" class="nav-item" data-view="stations">
                 <span class="nav-icon">📍</span>
@@ -59,10 +63,6 @@
             <a href="#" class="nav-item" data-view="zones">
                 <span class="nav-icon">🗺️</span>
                 <span>Zones Covered</span>
-            </a>
-            <a href="#" class="nav-item" data-view="gallery">
-                <span class="nav-icon">🖼️</span>
-                <span>Gallery</span>
             </a>
             <a href="#" class="nav-item" data-view="achievements">
                 <span class="nav-icon">🏆</span>
@@ -271,24 +271,54 @@
 
             </section>
 
-            <!-- ========== JOURNEYS VIEW ========== -->
+            <!-- ========== JOURNEYS VIEW (list only) ========== -->
             <section id="view-journeys" class="view">
+
+                <div class="page-back-bar mobile-only-back">
+                    <button type="button" class="page-back-btn" data-back-to="dashboard">← Back to Dashboard</button>
+                </div>
 
                 <div class="view-header">
                     <h2>My Journeys</h2>
-                    <p>Add new journeys and manage your travel history</p>
+                    <p>Search and manage your travel history</p>
                 </div>
 
-                <!-- Viewing other user -->
                 <div id="viewingUserCard" class="viewing-user-card" style="display:none;">
                     <div class="viewing-title">👤 Viewing Footprint</div>
                     <h3 id="viewingUserName">User</h3>
                     <button id="backToMyFootprint">← Back To My Footprint</button>
                 </div>
 
+                <div class="journeys-list-toolbar" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px;">
+                    <button type="button" class="theme-toggle-btn" id="goToAddJourneyBtn" style="white-space:nowrap;">➕ Add Journey</button>
+                </div>
+
+                <section id="journeys">
+                    
+                <div class="journey-search-bar">
+                    <input type="search" id="journeySearchInput" placeholder="Search by station code (e.g. MAS) or name…" autocomplete="off">
+                    <span class="journey-search-count" id="journeySearchCount"></span>
+                </div>
+                <div id="journeyList" class="journey-list"></div>
+
+                </section>
+
+            </section>
+
+            <!-- ========== ADD JOURNEY VIEW ========== -->
+            <section id="view-add-journey" class="view">
+
+                <div class="page-back-bar">
+                    <button type="button" class="page-back-btn" data-back-to="dashboard">← Back to Dashboard</button>
+                </div>
+
+                <div class="view-header">
+                    <h2>Add Journey</h2>
+                    <p>Plan a route and save it to your footprint</p>
+                </div>
+
                 <div class="journeys-workspace">
                     <div class="journeys-left">
-                        <!-- Add Journey Form -->
                         <div class="glass-card form" id="addJourneyFormCard">
                             <h3 style="margin:0 0 16px; font-size:18px;">Add Journey</h3>
 
@@ -316,19 +346,12 @@
                             </div>
                             <p style="margin:6px 0 0;font-size:12px;color:var(--text-secondary);">Leave blank to auto-estimate from distance.</p>
 
-                            <button id="addJourneyBtn" type="button">🚆 Add Journey</button>
-                        </div>
-
-                        <!-- Journey search + list -->
-                        <section id="journeys" style="margin-top:20px;">
-                            <div class="journey-search-bar">
-                                <input type="search" id="journeySearchInput" placeholder="Search journeys by station name or code…" autocomplete="off">
-                                <span class="journey-search-count" id="journeySearchCount"></span>
+                            <div class="journey-form-actions" style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
+                                <button id="addJourneyBtn" type="button" style="flex:1;">🚆 Add Journey</button>
+                                <button id="cancelEditJourneyBtn" type="button" class="cancel-edit-btn" style="display:none;flex:0 0 auto;">Cancel</button>
                             </div>
-                            <div id="journeyList" class="journey-list"></div>
-                        </section>
+                        </div>
                     </div>
-
                     <div class="journeys-right">
                         <div class="glass-card planner-map-card">
                             <div class="planner-map-header">
@@ -342,18 +365,26 @@
 
             </section>
 
-            <!-- ========== STATIONS VIEW (placeholder) ========== -->
+            <!-- ========== STATIONS VIEW ========== -->
             <section id="view-stations" class="view">
                 <div class="page-back-bar">
                     <button type="button" class="page-back-btn" data-back-to="dashboard">← Back</button>
                 </div>
                 <div class="view-header">
                     <h2>Stations</h2>
-                    <p>All stations you have visited</p>
+                    <p>All stations you have visited from your journeys</p>
                 </div>
-                <div class="placeholder-card">
-                    <p>Stations list coming soon. This view will show every unique station from your journeys.</p>
+                <div class="stations-summary glass-card" style="margin-bottom:16px;padding:16px 18px;">
+                    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
+                        <span id="stationsVisitedCount" style="font-size:28px;font-weight:800;">0</span>
+                        <span style="color:var(--text-secondary);font-size:14px;">unique stations visited</span>
+                    </div>
+                    <p style="margin:8px 0 0;font-size:13px;color:var(--text-secondary);">All stations from your journeys with a ✓ tick. Tap a card to show it on the map.</p>
+                    <div class="journey-search-bar" style="margin-top:12px;margin-bottom:0;">
+                        <input type="search" id="stationsSearchInput" placeholder="Search by name, code or zone…" autocomplete="off">
+                    </div>
                 </div>
+                <div id="stationsGrid" class="stations-grid"></div>
             </section>
 
             <!-- ========== ZONES VIEW (placeholder) ========== -->
@@ -378,21 +409,7 @@
                 <div id="zonesGrid" class="zones-grid"></div>
             </section>
 
-            <!-- ========== GALLERY VIEW (placeholder) ========== -->
-            <section id="view-gallery" class="view">
-                <div class="page-back-bar">
-                    <button type="button" class="page-back-btn" data-back-to="dashboard">← Back</button>
-                </div>
-                <div class="view-header">
-                    <h2>Gallery</h2>
-                    <p>Photos and memories from your rail journeys</p>
-                </div>
-                <div class="placeholder-card">
-                    <p>Gallery coming soon.</p>
-                </div>
-            </section>
-
-            <!-- ========== ACHIEVEMENTS VIEW (placeholder) ========== -->
+                        <!-- ========== ACHIEVEMENTS VIEW (placeholder) ========== -->
             <section id="view-achievements" class="view">
                 <div class="page-back-bar">
                     <button type="button" class="page-back-btn" data-back-to="dashboard">← Back</button>
@@ -502,13 +519,66 @@
                 </div>
 
                 <div class="glass-card" style="margin-bottom:24px;">
+                    <h3 style="margin:0 0 12px;">Profile</h3>
+                    <p style="color:var(--text-secondary); font-size:14px; margin:0 0 12px;">
+                        Customise the name shown in the app. Your Google profile photo stays the same.
+                    </p>
+                    <label for="settingsDisplayName" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Display name</label>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                        <input id="settingsDisplayName" type="text" maxlength="48" placeholder="Your explorer name" autocomplete="nickname"
+                            style="flex:1;min-width:160px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--background);color:var(--text);font-size:14px;">
+                        <button type="button" id="saveDisplayNameBtn" class="theme-toggle-btn" style="white-space:nowrap;">Save name</button>
+                    </div>
+                    <p id="displayNameStatus" style="margin:8px 0 0;font-size:12px;color:var(--text-secondary);"></p>
+                </div>
+
+                <div class="glass-card" style="margin-bottom:24px;">
+                    <h3 style="margin:0 0 12px;">Preferences</h3>
+                    <p style="color:var(--text-secondary); font-size:14px; margin:0 0 14px;">
+                        These options are saved on this device and apply across the app.
+                    </p>
+                    <label class="settings-pref-row">
+                        <input type="checkbox" id="prefReduceMotion">
+                        <span>Reduce motion / animations</span>
+                    </label>
+                    <label class="settings-pref-row">
+                        <input type="checkbox" id="prefCompactCards">
+                        <span>Compact journey cards</span>
+                    </label>
+                    <label class="settings-pref-row">
+                        <input type="checkbox" id="prefHideFloatingStats">
+                        <span>Hide floating map stats</span>
+                    </label>
+                    <label class="settings-pref-row">
+                        <input type="checkbox" id="prefConfirmDelete" checked>
+                        <span>Confirm before deleting a journey</span>
+                    </label>
+                    <div style="margin-top:14px;">
+                        <label for="prefDefaultView" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Default screen after sign-in</label>
+                        <select id="prefDefaultView" style="width:100%;max-width:320px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--background);color:var(--text);font-size:14px;">
+                            <option value="dashboard">Dashboard</option>
+                            <option value="journeys">My Journeys</option>
+                            <option value="add-journey">Add Journey</option>
+                            <option value="stations">Stations</option>
+                            <option value="analytics">Analytics</option>
+                        </select>
+                    </div>
+                    <p id="prefsStatus" style="margin:10px 0 0;font-size:12px;color:var(--text-secondary);"></p>
+                </div>
+
+                <div class="glass-card" style="margin-bottom:24px;">
                     <h3 style="margin:0 0 12px;">Theme</h3>
                     <p style="color:var(--text-secondary); font-size:14px; margin:0 0 16px;">
-                        Choose light or dark appearance. You can also use the moon button in the header.
+                        Choose light, dark, or ocean appearance. Header moon cycles themes.
                     </p>
-                    <button type="button" id="settingsThemeToggle" class="theme-toggle-btn">
+                    <div class="theme-picker" id="themePicker" style="display:flex;flex-wrap:wrap;gap:10px;">
+                        <button type="button" class="theme-option" data-theme="light" aria-pressed="true">☀️ Light</button>
+                        <button type="button" class="theme-option" data-theme="dark" aria-pressed="false">🌙 Dark</button>
+                        <button type="button" class="theme-option" data-theme="ocean" aria-pressed="false">🌊 Ocean</button>
+                    </div>
+                    <button type="button" id="settingsThemeToggle" class="theme-toggle-btn" style="margin-top:14px;">
                         <span class="theme-toggle-icon">🌙</span>
-                        <span class="theme-toggle-label">Switch to Dark Mode</span>
+                        <span class="theme-toggle-label">Cycle theme</span>
                     </button>
                 </div>
 
@@ -536,17 +606,33 @@
                         <p id="adminSessionInfo">Sign in as admin to use tools.</p>
                         <div class="admin-actions">
                             <button type="button" class="admin-btn" id="adminCopyUid">Copy my UID</button>
+                            <button type="button" class="admin-btn" id="adminCopyEmail">Copy email</button>
                             <button type="button" class="admin-btn" id="adminRefreshStats">Refresh statistics</button>
                             <button type="button" class="admin-btn" id="adminExportData">Export my journeys (JSON)</button>
+                            <button type="button" class="admin-btn" id="adminExportStations">Export stations (CSV)</button>
                         </div>
                     </div>
                     <div class="glass-card admin-card">
                         <h3>Map &amp; cache</h3>
-                        <p>Force map resize and clear in-memory route layers.</p>
+                        <p>Force map resize, clear layers, and local UI cache.</p>
                         <div class="admin-actions">
                             <button type="button" class="admin-btn" id="adminInvalidateMap">Invalidate map size</button>
                             <button type="button" class="admin-btn" id="adminClearRouteLayers">Clear route layers</button>
                             <button type="button" class="admin-btn" id="adminReloadJourneys">Reload journeys</button>
+                            <button type="button" class="admin-btn" id="adminClearLocalCache">Clear local UI cache</button>
+                            <button type="button" class="admin-btn" id="adminRebuildStations">Rebuild stations view</button>
+                        </div>
+                    </div>
+                    <div class="glass-card admin-card">
+                        <h3>Data tools</h3>
+                        <p>Inspect footprint counts and recompute derived stats.</p>
+                        <div class="admin-actions">
+                            <button type="button" class="admin-btn" id="adminShowFootprintSummary">Footprint summary</button>
+                            <button type="button" class="admin-btn" id="adminListUnmappedStates">List unmapped states</button>
+                            <button type="button" class="admin-btn" id="adminOpenConsoleHint">Console diagnostics tip</button>
+                            <button type="button" class="admin-btn" id="adminPerfSnapshot">Performance snapshot</button>
+                            <button type="button" class="admin-btn" id="adminForceStationsRefresh">Force stations refresh</button>
+                            <button type="button" class="admin-btn" id="adminScrollTop">Scroll views to top</button>
                         </div>
                     </div>
                     <div class="glass-card admin-card">
@@ -554,17 +640,20 @@
                         <p>Jump to key screens without the sidebar.</p>
                         <div class="admin-actions admin-nav-actions">
                             <button type="button" class="admin-btn admin-nav" data-goto="dashboard">Dashboard</button>
-                            <button type="button" class="admin-btn admin-nav" data-goto="journeys">Journeys</button>
+                            <button type="button" class="admin-btn admin-nav" data-goto="journeys">My Journeys</button>
+                            <button type="button" class="admin-btn admin-nav" data-goto="add-journey">Add Journey</button>
+                            <button type="button" class="admin-btn admin-nav" data-goto="stations">Stations</button>
                             <button type="button" class="admin-btn admin-nav" data-goto="zones">Zones</button>
                             <button type="button" class="admin-btn admin-nav" data-goto="analytics">Analytics</button>
                             <button type="button" class="admin-btn admin-nav" data-goto="explore">Explore</button>
+                            <button type="button" class="admin-btn admin-nav" data-goto="settings">Settings</button>
                         </div>
                     </div>
                     <div class="glass-card admin-card">
                         <h3>Appearance</h3>
-                        <p>Toggle theme from admin without leaving this page.</p>
+                        <p>Cycle themes from admin without leaving this page.</p>
                         <div class="admin-actions">
-                            <button type="button" class="admin-btn" id="adminToggleTheme">Toggle light / dark</button>
+                            <button type="button" class="admin-btn" id="adminToggleTheme">Cycle light / dark / ocean</button>
                         </div>
                     </div>
                     <div class="glass-card admin-card danger-card">
@@ -650,10 +739,10 @@
     // ---------- Unified view switcher ----------
     const VIEW_SUBTITLES = {
         dashboard: "Let's continue your rail journey",
-        journeys: "Manage and add your journeys",
-        stations: "Explore the stations you've visited",
+        journeys: "Search and manage your travel history",
+        "add-journey": "Plan and save a new railway journey",
+        stations: "Stations grouped by state",
         zones: "See which railway zones you've covered",
-        gallery: "Your rail memories",
         achievements: "Your milestones and badges",
         explore: "Discover other explorers",
         analytics: "Detailed breakdown of your rail footprint",
@@ -725,8 +814,8 @@
         // Planner map on Journeys view
         if (viewName === "journeys") {
             setTimeout(() => {
-                if (typeof window.plannerMap !== "undefined" && window.plannerMap) {
-                    window.plannerMap.invalidateSize(true);
+                if (window.plannerMap && typeof window.plannerMap.invalidateSize === "function") {
+                    try { window.plannerMap.invalidateSize(true); } catch (_) {}
                 }
             }, 200);
         }
@@ -734,6 +823,22 @@
         // Zones page dynamic render
         if (viewName === "zones" && typeof window.renderZonesPage === "function") {
             setTimeout(() => window.renderZonesPage(), 40);
+        }
+        if (viewName === "stations" && typeof window.renderStationsPage === "function") {
+            setTimeout(() => window.renderStationsPage(), 40);
+        }
+        if (viewName === "add-journey") {
+            setTimeout(() => {
+                if (typeof window.refreshPlannerMapSize === "function") {
+                    try { window.refreshPlannerMapSize(); } catch (_) {}
+                }
+                if (window.plannerMap && typeof window.plannerMap.invalidateSize === "function") {
+                    try { window.plannerMap.invalidateSize(true); } catch (_) {}
+                }
+            }, 80);
+        }
+        if (viewName === "settings" && typeof window.loadProfileIntoSettings === "function") {
+            setTimeout(() => window.loadProfileIntoSettings(), 40);
         }
 
         // Admin only

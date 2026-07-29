@@ -10,10 +10,18 @@ import {
     getManualZones,
     saveManualZones
 } from "./firestore.js";
-import { loadStatistics, IR_ZONES, getCoveredZonesFromJourneys } from "./statistics.js";
+import {
+    loadStatistics,
+    IR_ZONES,
+    getCoveredZonesFromJourneys,
+    calculateJourneyStatistics,
+    resolveStateCode,
+    resolveZoneCode
+} from "./statistics.js";
 import { renderJourneys } from "./journey.js";
 import { refreshMap } from "./map.js";
 import { renderZonesPage } from "./zones.js";
+import { renderStationsPage } from "./stationsPage.js";
 
 const ADMIN_EMAILS = ["harshcaptain2310@gmail.com"];
 const ADMIN_UIDS = ["aa1XXicVpPeZzmFWp6DKix7D2012"];
@@ -73,7 +81,7 @@ async function refreshAdminPanel(user) {
             <li><strong>Online:</strong> ${navigator.onLine ? "Yes" : "No"}</li>
             <li><strong>Main map:</strong> ${window.map ? "Ready" : "Not ready"}</li>
             <li><strong>Planner map:</strong> ${window.plannerMap ? "Ready" : "Not ready"}</li>
-            <li><strong>Theme:</strong> ${document.body.classList.contains("dark") ? "Dark" : "Light"}</li>
+            <li><strong>Theme:</strong> ${document.body.classList.contains("ocean") ? "Ocean" : document.body.classList.contains("dark") ? "Dark" : "Light"}</li>
             <li><strong>UA:</strong> <span style="word-break:break-all;font-size:11px;">${ua.slice(0, 100)}…</span></li>
         `;
     }
@@ -191,12 +199,176 @@ export function initializeAdminPanel() {
     });
 
     document.getElementById("adminToggleTheme")?.addEventListener("click", () => {
-        document.body.classList.toggle("dark");
-        const isDark = document.body.classList.contains("dark");
-        try {
-            localStorage.setItem("theme", isDark ? "dark" : "light");
-        } catch (_) {}
+        const order = ["light", "dark", "ocean"];
+        let cur = "light";
+        if (document.body.classList.contains("ocean")) cur = "ocean";
+        else if (document.body.classList.contains("dark")) cur = "dark";
+        const next = order[(order.indexOf(cur) + 1) % order.length];
+        document.body.classList.remove("dark", "ocean");
+        if (next === "dark") document.body.classList.add("dark");
+        if (next === "ocean") document.body.classList.add("ocean");
+        try { localStorage.setItem("theme", next); } catch (_) {}
         refreshAdminPanel(auth.currentUser);
+    });
+
+    document.getElementById("adminCopyEmail")?.addEventListener("click", async () => {
+        const email = auth.currentUser?.email;
+        if (!email) { alert("Not signed in."); return; }
+        try {
+            await navigator.clipboard.writeText(email);
+            alert("Email copied.");
+        } catch (_) {
+            prompt("Copy email:", email);
+        }
+    });
+
+    document.getElementById("adminExportStations")?.addEventListener("click", async () => {
+        try {
+            const journeys = await loadJourneys();
+            const map = new Map();
+            const add = (s) => {
+                if (!s) return;
+                const code = (s.code || "").toString().trim().toUpperCase() || "?";
+                const key = code + "|" + (s.name || "");
+                if (map.has(key)) {
+                    map.get(key).visits += 1;
+                    return;
+                }
+                map.set(key, {
+                    code,
+                    name: s.name || "",
+                    lat: s.lat,
+                    lon: s.lon,
+                    state: resolveStateCode(s.code, s.lat, s.lon) || "",
+                    zone: resolveZoneCode(s.code, s.lat, s.lon) || "",
+                    visits: 1
+                });
+            };
+            for (const j of journeys) {
+                add(j.origin);
+                add(j.destination);
+                (j.intermediates || []).forEach(add);
+            }
+            const rows = [["code", "name", "state", "zone", "visits", "lat", "lon"]];
+            [...map.values()]
+                .sort((a, b) => a.state.localeCompare(b.state) || a.name.localeCompare(b.name))
+                .forEach((r) => {
+                    rows.push([r.code, r.name, r.state, r.zone, r.visits, r.lat, r.lon]);
+                });
+            const csv = rows
+                .map((row) =>
+                    row
+                        .map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`)
+                        .join(",")
+                )
+                .join("\n");
+            const blob = new Blob([csv], { type: "text/csv" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `rail-footprint-stations-${Date.now()}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            alert(e.message || "Export failed.");
+        }
+    });
+
+    document.getElementById("adminClearLocalCache")?.addEventListener("click", () => {
+        try {
+            const keepTheme = localStorage.getItem("theme");
+            // Only clear non-auth app keys
+            const keys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && (k.startsWith("rail") || k.startsWith("Rail") || k === "theme")) {
+                    keys.push(k);
+                }
+            }
+            keys.forEach((k) => {
+                if (k === "theme") return;
+                localStorage.removeItem(k);
+            });
+            if (keepTheme) localStorage.setItem("theme", keepTheme);
+            alert("Local UI cache cleared (theme kept). Reload if UI looks stale.");
+        } catch (e) {
+            alert(e.message || "Failed.");
+        }
+    });
+
+    document.getElementById("adminRebuildStations")?.addEventListener("click", async () => {
+        try {
+            const journeys = await loadJourneys();
+            if (typeof renderStationsPage === "function") renderStationsPage(journeys);
+            if (typeof window.switchView === "function") window.switchView("stations");
+            alert("Stations view rebuilt.");
+        } catch (e) {
+            alert(e.message || "Failed.");
+        }
+    });
+
+    document.getElementById("adminShowFootprintSummary")?.addEventListener("click", async () => {
+        try {
+            const journeys = await loadJourneys();
+            const manual = await getManualZones();
+            const stats = calculateJourneyStatistics(journeys, manual);
+            alert(
+                [
+                    `Journeys: ${stats.journeys}`,
+                    `Stations: ${stats.stations}`,
+                    `Distance: ${stats.distance} km`,
+                    `States: ${stats.states} / ${stats.statesTotal}`,
+                    `Zones: ${stats.zones} / ${stats.zonesTotal}`,
+                    `Travel time: ${stats.travelTime}`,
+                    `Longest: ${stats.longest} (${stats.longestMeta || ""})`
+                ].join("\n")
+            );
+        } catch (e) {
+            alert(e.message || "Failed.");
+        }
+    });
+
+    document.getElementById("adminListUnmappedStates")?.addEventListener("click", async () => {
+        try {
+            const journeys = await loadJourneys();
+            const unmapped = [];
+            const seen = new Set();
+            const check = (s) => {
+                if (!s) return;
+                const code = (s.code || "").toString().trim().toUpperCase();
+                const key = code || s.name;
+                if (!key || seen.has(key)) return;
+                seen.add(key);
+                const state = resolveStateCode(s.code, s.lat, s.lon);
+                if (!state) {
+                    unmapped.push(`${code || "?"} — ${s.name || "?"} (${s.lat}, ${s.lon})`);
+                }
+            };
+            for (const j of journeys) {
+                check(j.origin);
+                check(j.destination);
+                (j.intermediates || []).forEach(check);
+            }
+            if (!unmapped.length) {
+                alert("All visited stations resolved to a state.");
+            } else {
+                console.table(unmapped);
+                alert(
+                    `${unmapped.length} station(s) without state:\n\n` +
+                    unmapped.slice(0, 25).join("\n") +
+                    (unmapped.length > 25 ? `\n… +${unmapped.length - 25} more (see console)` : "")
+                );
+            }
+        } catch (e) {
+            alert(e.message || "Failed.");
+        }
+    });
+
+    document.getElementById("adminOpenConsoleHint")?.addEventListener("click", () => {
+        alert(
+            "Open DevTools → Console for route logs, graph errors, and unmapped stations (after “List unmapped states”).\n\n" +
+            "Useful: window.map, window.plannerMap, window.stations"
+        );
     });
 
     document.querySelectorAll(".admin-nav[data-goto]").forEach((btn) => {
@@ -266,6 +438,41 @@ export function initializeAdminPanel() {
             if (st) st.textContent = e.message || "Save failed.";
             alert(e.message || "Save failed.");
         }
+    });
+
+
+    document.getElementById("adminPerfSnapshot")?.addEventListener("click", () => {
+        const mem = performance.memory
+            ? `${Math.round(performance.memory.usedJSHeapSize / 1048576)} MB / ${Math.round(performance.memory.jsHeapSizeLimit / 1048576)} MB`
+            : "n/a (browser)";
+        const nav = performance.getEntriesByType?.("navigation")?.[0];
+        const load = nav ? `${Math.round(nav.loadEventEnd)} ms load` : "";
+        alert(
+            [
+                `DOM nodes: ${document.getElementsByTagName("*").length}`,
+                `Journey layers: ${typeof window.journeyLayers !== "undefined" ? "see console" : "—"}`,
+                `JS heap: ${mem}`,
+                load,
+                `Online: ${navigator.onLine ? "yes" : "no"}`,
+                `Device memory: ${navigator.deviceMemory || "n/a"} GB`,
+                `Cores: ${navigator.hardwareConcurrency || "n/a"}`
+            ].join("\n")
+        );
+    });
+
+    document.getElementById("adminForceStationsRefresh")?.addEventListener("click", async () => {
+        try {
+            const { loadJourneys } = await import("./firestore.js");
+            const j = await loadJourneys();
+            if (typeof window.renderStationsPage === "function") window.renderStationsPage(j);
+            alert("Stations list refreshed.");
+        } catch (e) {
+            alert(e.message || "Failed");
+        }
+    });
+
+    document.getElementById("adminScrollTop")?.addEventListener("click", () => {
+        document.getElementById("views")?.scrollTo({ top: 0, behavior: "smooth" });
     });
 
     updateAdminVisibility(auth.currentUser);

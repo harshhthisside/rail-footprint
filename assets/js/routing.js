@@ -118,24 +118,13 @@ export function calculateRoute(stations) {
         const startNode = getGraphNode(stations[i]);
         const endNode = getGraphNode(stations[i + 1]);
 
-        console.log(
-            `Segment ${i + 1}: ${startNode} → ${endNode}`
-        );
-
         if (
             startNode < 0 ||
             endNode < 0 ||
             startNode >= graphNodes.length ||
             endNode >= graphNodes.length
         ) {
-
-            console.error("Invalid graph node", {
-                startNode,
-                endNode
-            });
-
             return [];
-
         }
 
         const nodePath = shortestPath(
@@ -144,11 +133,7 @@ export function calculateRoute(stations) {
         );
 
         if (!nodePath || nodePath.length === 0) {
-
-            console.warn("No route found.");
-
             return [];
-
         }
 
         const coordinates = nodePath.map(id => [
@@ -178,11 +163,6 @@ export function calculateRoute(stations) {
             Number(stations[stations.length - 1].lon)
         ];
     }
-
-    console.log(
-        "Total Route Points:",
-        fullCoordinates.length
-    );
 
     return fullCoordinates;
 

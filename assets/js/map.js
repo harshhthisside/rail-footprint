@@ -1194,7 +1194,9 @@ export function restoreStationDotsAfterExport() {
 const filterState = {
     showRoutes: true,
     showDots: true,
-    showGlow: true
+    showGlow: true,
+    dimRoutes: false,
+    onlyEndpoints: false
 };
 
 export function initializeMapFilters() {
@@ -1229,7 +1231,16 @@ function openFiltersPanel(anchor) {
             <input type="checkbox" id="fltDots" ${filterState.showDots ? "checked" : ""}>
             <span>Station markers</span>
         </label>
+        <label class="map-filter-row">
+            <input type="checkbox" id="fltDim" ${filterState.dimRoutes ? "checked" : ""}>
+            <span>Dim routes (lighter lines)</span>
+        </label>
+        <label class="map-filter-row">
+            <input type="checkbox" id="fltEnds" ${filterState.onlyEndpoints ? "checked" : ""}>
+            <span>Endpoints only (hide mid markers)</span>
+        </label>
         <button type="button" class="map-filter-apply" id="fltFitRoutes">Fit all routes</button>
+        <button type="button" class="map-filter-apply" id="fltIndia">Reset India view</button>
         <button type="button" class="map-filter-close" id="fltClose">Close</button>
     `;
 
@@ -1247,6 +1258,19 @@ function openFiltersPanel(anchor) {
     panel.querySelector("#fltDots").addEventListener("change", (e) => {
         filterState.showDots = e.target.checked;
         applyFilters();
+    });
+    panel.querySelector("#fltDim")?.addEventListener("change", (e) => {
+        filterState.dimRoutes = e.target.checked;
+        applyFilters();
+    });
+    panel.querySelector("#fltEnds")?.addEventListener("change", (e) => {
+        filterState.onlyEndpoints = e.target.checked;
+        applyFilters();
+    });
+    panel.querySelector("#fltIndia")?.addEventListener("click", () => {
+        try {
+            if (map) map.setView([22.0, 80.0], 4.6);
+        } catch (_) {}
     });
     panel.querySelector("#fltFitRoutes").addEventListener("click", () => {
         try {
@@ -1285,12 +1309,18 @@ function applyFilters() {
             if (layer.main) {
                 if (filterState.showRoutes) {
                     if (!map.hasLayer(layer.main)) layer.main.addTo(map);
+                    try {
+                        layer.main.setStyle({
+                            opacity: filterState.dimRoutes ? 0.35 : 0.9,
+                            weight: filterState.dimRoutes ? 2 : (layer.main.options?.weight || 4)
+                        });
+                    } catch (_) {}
                 } else if (map.hasLayer(layer.main)) {
                     map.removeLayer(layer.main);
                 }
             }
             if (layer.glow) {
-                if (filterState.showRoutes && filterState.showGlow) {
+                if (filterState.showRoutes && filterState.showGlow && !filterState.dimRoutes) {
                     if (!map.hasLayer(layer.glow)) layer.glow.addTo(map);
                 } else if (map.hasLayer(layer.glow)) {
                     map.removeLayer(layer.glow);
@@ -1300,10 +1330,23 @@ function applyFilters() {
     });
     stationDots.forEach((dot) => {
         try {
-            ["origin", "destination"].forEach((k) => {
+            ["origin", "destination", "mid", "intermediate", "intermediates"].forEach((k) => {
                 const m = dot[k];
                 if (!m) return;
-                if (filterState.showDots) {
+                const isEnd = k === "origin" || k === "destination";
+                const show = filterState.showDots && (!filterState.onlyEndpoints || isEnd);
+                if (Array.isArray(m)) {
+                    m.forEach((mk) => {
+                        if (!mk) return;
+                        if (show) {
+                            if (!map.hasLayer(mk)) mk.addTo(map);
+                        } else if (map.hasLayer(mk)) {
+                            map.removeLayer(mk);
+                        }
+                    });
+                    return;
+                }
+                if (show) {
                     if (!map.hasLayer(m)) m.addTo(map);
                 } else if (map.hasLayer(m)) {
                     map.removeLayer(m);

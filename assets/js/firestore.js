@@ -482,3 +482,37 @@ export async function saveManualZones(zones) {
     );
     return list;
 }
+
+// ==========================================
+// Display name (custom profile name)
+// ==========================================
+
+export async function getUserProfile() {
+    if (!auth.currentUser) return null;
+    try {
+        const userRef = doc(db, "users", auth.currentUser.uid);
+        const snap = await getDoc(userRef);
+        if (!snap.exists()) return null;
+        return { id: snap.id, ...snap.data() };
+    } catch (e) {
+        console.warn("getUserProfile", e);
+        return null;
+    }
+}
+
+export async function updateDisplayName(name) {
+    if (!auth.currentUser)
+        throw new Error("Please sign in first.");
+    const cleaned = String(name || "").trim().slice(0, 48);
+    if (!cleaned) throw new Error("Name cannot be empty.");
+    const userRef = doc(db, "users", auth.currentUser.uid);
+    await setDoc(
+        userRef,
+        {
+            name: cleaned,
+            displayNameUpdatedAt: Date.now()
+        },
+        { merge: true }
+    );
+    return cleaned;
+}

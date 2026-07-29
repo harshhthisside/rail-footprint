@@ -59,13 +59,19 @@ export function addIntermediateStation(station = null) {
     if (station) {
 
         input.value =
-            `${station.name} (${station.code})`;
+            station.code
+                ? `${station.name} (${station.code})`
+                : (station.name || "");
 
-        input.dataset.name = station.name;
-        input.dataset.code = station.code;
-
-        input.dataset.lat = station.lat;
-        input.dataset.lon = station.lon;
+        input.dataset.name = station.name || "";
+        input.dataset.code = station.code || "";
+        input.dataset.lat = station.lat != null ? station.lat : "";
+        input.dataset.lon = station.lon != null ? station.lon : "";
+        if (station.graph_node != null && station.graph_node !== "") {
+            input.dataset.node = station.graph_node;
+        } else {
+            input.dataset.node = "";
+        }
 
     }
 
@@ -81,6 +87,7 @@ export function addIntermediateStation(station = null) {
         input.dataset.code = "";
         input.dataset.lat = "";
         input.dataset.lon = "";
+        input.dataset.node = "";
 
         // Automatically place cursor
         requestAnimationFrame(() => {
@@ -90,6 +97,18 @@ export function addIntermediateStation(station = null) {
         });
 
     }
+
+    // Live route preview when intermediate changes
+    input.addEventListener("change", () => {
+        if (typeof window.updatePlannerPreviewFromForm === "function") {
+            try { window.updatePlannerPreviewFromForm(); } catch (_) {}
+        }
+    });
+    input.addEventListener("blur", () => {
+        if (typeof window.updatePlannerPreviewFromForm === "function") {
+            try { window.updatePlannerPreviewFromForm(); } catch (_) {}
+        }
+    });
 
     updateLabels();
 

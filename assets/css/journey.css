@@ -636,32 +636,58 @@ body.dark .danger-outline:hover{
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
 }
 
-@media (max-width: 1100px) {
+/* Tablet: keep form + map side-by-side */
+@media (max-width: 1100px) and (min-width: 769px) {
+    .journeys-workspace {
+        grid-template-columns: minmax(0, 1fr) minmax(240px, 0.95fr);
+    }
+    .journeys-right {
+        position: sticky;
+        top: 12px;
+        order: 0;
+    }
+    .planner-map-card {
+        height: 360px;
+        min-height: 300px;
+        max-height: 480px;
+    }
+    .planner-map {
+        min-height: 220px;
+    }
+}
+
+/* Mobile: form first, map below (not forced on top) */
+@media (max-width: 768px) {
     .journeys-workspace {
         grid-template-columns: 1fr;
+        gap: 14px;
+    }
+    .journeys-left {
+        order: 0;
     }
     .journeys-right {
         position: relative;
         top: 0;
-        order: -1; /* map on top while adding on tablet/mobile */
+        order: 0;
     }
     .planner-map-card {
-        height: 280px;
-        min-height: 260px;
-        max-height: 320px;
+        height: 220px;
+        min-height: 200px;
+        max-height: 280px;
     }
     .planner-map {
-        min-height: 200px;
-    }
-}
-
-@media (max-width: 768px) {
-    .planner-map-card {
-        height: 240px;
-        min-height: 220px;
+        min-height: 160px;
     }
     .journey-search-bar {
         flex-direction: column;
         align-items: stretch;
+    }
+    .journey-form-actions {
+        flex-direction: column;
+    }
+    .journey-form-actions #addJourneyBtn,
+    .journey-form-actions #cancelEditJourneyBtn {
+        width: 100%;
+        min-height: 48px;
     }
 }

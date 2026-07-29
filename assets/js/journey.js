@@ -46,6 +46,9 @@ deleteAllBtn.innerHTML = "🗑 Delete All Journeys";
 let initialized = false;
 let visibleJourneyCount = 8;
 let isBusy = false;
+/** Full journey list from last load (for search across entire history) */
+let cachedJourneys = [];
+let activeSearchQuery = "";
 
 // ==========================================
 // Edit Mode
@@ -89,6 +92,13 @@ export function initializeJourneyManager() {
         });
     }
 
+    const cancelEditBtn = document.getElementById("cancelEditJourneyBtn");
+    cancelEditBtn?.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        resetJourneyForm();
+    });
+
     loadMoreBtn.addEventListener("click", async (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -129,6 +139,30 @@ export function initializeJourneyManager() {
 
     deleteAllBtn.addEventListener("click", handleDeleteAll);
 
+}
+
+
+function routeDistanceKm(coords) {
+    if (!coords || coords.length < 2) return 0;
+    const R = 6371;
+    let total = 0;
+    for (let i = 1; i < coords.length; i++) {
+        const lat1 = Number(coords[i - 1][0]);
+        const lon1 = Number(coords[i - 1][1]);
+        const lat2 = Number(coords[i][0]);
+        const lon2 = Number(coords[i][1]);
+        if (![lat1, lon1, lat2, lon2].every(Number.isFinite)) continue;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos(lat1 * Math.PI / 180) *
+            Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) ** 2;
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        total += R * c;
+    }
+    return total;
 }
 
 // ==========================================
@@ -193,8 +227,6 @@ async function createJourney() {
         }
     }
 
-    console.table(stops);
-
     isBusy = true;
     if (addJourneyBtn) {
         addJourneyBtn.disabled = true;
@@ -203,14 +235,18 @@ async function createJourney() {
 
     try {
         const coordinates = calculateRoute(stops);
-        // Fewer points on mobile/tablet for smoother rendering
-        const maxPts = (typeof window !== "undefined" && window.innerWidth <= 900) ? 900 : 2000;
-        const optimizedRoute = simplifyRoute(coordinates, maxPts);
 
         if (!coordinates || coordinates.length === 0) {
             alert("No railway route found between the selected stations.");
             return;
         }
+
+        // Accurate distance from full (unsimplified) railway path
+        const distanceKm = routeDistanceKm(coordinates);
+
+        // Fewer points on mobile/tablet for smoother rendering (display only)
+        const maxPts = (typeof window !== "undefined" && window.innerWidth <= 900) ? 900 : 2000;
+        const optimizedRoute = simplifyRoute(coordinates, maxPts);
 
         const hoursEl = document.getElementById("durationHours");
         const minsEl = document.getElementById("durationMinutes");
@@ -236,6 +272,7 @@ async function createJourney() {
                 lat: point[0],
                 lon: point[1]
             })),
+            distanceKm: Math.round(distanceKm * 10) / 10,
             durationMinutes: durationMinutes > 0 ? durationMinutes : null,
             createdAt: Date.now()
         };
@@ -251,6 +288,9 @@ async function createJourney() {
         await renderJourneys();
         await loadStatistics();
         resetJourneyForm();
+        if (typeof window.switchView === "function") {
+            window.switchView("journeys");
+        }
 
     } catch (err) {
         console.error(err);
@@ -284,13 +324,21 @@ export async function renderJourneys() {
         return;
     }
 
+    cachedJourneys = journeys;
     drawAllJourneys(journeys);
     await loadStatistics();
+
+    // Refresh stations page if present
+    if (typeof window.renderStationsPage === "function") {
+        try { window.renderStationsPage(journeys); } catch (_) {}
+    }
 
     if (!journeys.length) {
         journeyList.innerHTML = "<p>No journeys added yet.</p>";
         deleteAllBtn.remove();
         loadMoreBtn.remove();
+        const countEl = document.getElementById("journeySearchCount");
+        if (countEl) countEl.textContent = "";
         return;
     }
 
@@ -298,125 +346,139 @@ export async function renderJourneys() {
     loadMoreBtn.remove();
     journeyList.innerHTML = "";
 
-    const visibleJourneys = journeys.slice(0, visibleJourneyCount);
+    const q = (activeSearchQuery || "").trim().toLowerCase();
+    // Search runs on the FULL journey list, not only the first 8
+    const matched = q
+        ? journeys.filter((j) => journeyMatchesQuery(j, q))
+        : journeys;
 
-    visibleJourneys.forEach(journey => {
+    const toShow = q
+        ? matched
+        : matched.slice(0, visibleJourneyCount);
 
-        const card = document.createElement("div");
-        card.className = "journey-card";
-        card.dataset.journeyId = journey.id;
-        card.dataset.search = journeySearchHaystack(journey);
-
-        const totalStations =
-            1 + (journey.intermediates?.length || 0) + 1;
-
-        let timeline = "";
-
-        timeline += `
-            <div class="timeline-item">
-                <div class="station-name">${escapeHtml(journey.origin?.name || "?")}</div>
-                <div class="station-code">${escapeHtml(journey.origin?.code || "")}</div>
-            </div>
-        `;
-
-        (journey.intermediates || []).forEach(stop => {
-            timeline += `
-                <div class="timeline-item">
-                    <div class="station-name">${escapeHtml(stop.name || "?")}</div>
-                    <div class="station-code">${escapeHtml(stop.code || "")}</div>
-                </div>
-            `;
-        });
-
-        timeline += `
-            <div class="timeline-item">
-                <div class="station-name">${escapeHtml(journey.destination?.name || "?")}</div>
-                <div class="station-code">${escapeHtml(journey.destination?.code || "")}</div>
-            </div>
-        `;
-
-        card.innerHTML = `
-            <h3>
-                🚆 ${escapeHtml(journey.origin?.code || "?")}
-                →
-                ${escapeHtml(journey.destination?.code || "?")}
-            </h3>
-            <div class="journey-meta">
-                <span>🚉 ${totalStations} Stations</span>
-            </div>
-            <button type="button" class="expandRoute">▼ Expand Route</button>
-            <div class="timeline hidden">${timeline}</div>
-            <div class="journey-actions">
-                <button type="button" class="editJourney">✏ Edit</button>
-                <button type="button" class="deleteJourney">🗑 Delete</button>
-            </div>
-        `;
-
-        const expandBtn = card.querySelector(".expandRoute");
-        const timelineBox = card.querySelector(".timeline");
-
-        expandBtn.addEventListener("click", (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            timelineBox.classList.toggle("hidden");
-            expandBtn.innerHTML = timelineBox.classList.contains("hidden")
-                ? "▼ Expand Route"
-                : "▲ Hide Route";
-        });
-
-        card.addEventListener("click", (e) => {
-            if (e.target.closest("button")) return;
-            focusJourney(journey.id);
-        });
-
-        card.querySelector(".editJourney").addEventListener("click", (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            loadJourneyForEditing(journey);
-        });
-
-        const delBtn = card.querySelector(".deleteJourney");
-        const doDelete = async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (isBusy) return;
-
-            if (!window.confirm("Delete this journey?")) return;
-
-            isBusy = true;
-            delBtn.disabled = true;
-            delBtn.textContent = "…";
-
-            try {
-                await removeJourney(journey.id);
-                removeJourneyFromMap(journey.id);
-                visibleJourneyCount = 8;
-                await renderJourneys();
-                await loadStatistics();
-            } catch (err) {
-                console.error(err);
-                alert(err.message || "Failed to delete journey.");
-                delBtn.disabled = false;
-                delBtn.innerHTML = "🗑 Delete";
-            } finally {
-                isBusy = false;
-            }
-        };
-        delBtn.addEventListener("click", doDelete);
-
-        journeyList.appendChild(card);
+    toShow.forEach(journey => {
+        journeyList.appendChild(buildJourneyCard(journey));
     });
 
-    if (visibleJourneyCount < journeys.length) {
+    if (!q && visibleJourneyCount < matched.length) {
         journeyList.appendChild(loadMoreBtn);
     }
 
     journeyList.appendChild(deleteAllBtn);
 
-    const searchInput = document.getElementById("journeySearchInput");
-    if (searchInput && searchInput.value.trim()) {
-        applyJourneySearch(searchInput.value);
+    const countEl = document.getElementById("journeySearchCount");
+    if (countEl) {
+        countEl.textContent = q
+            ? `${matched.length} match${matched.length === 1 ? "" : "es"}`
+            : "";
     }
+}
+
+function buildJourneyCard(journey) {
+    const card = document.createElement("div");
+    card.className = "journey-card";
+    card.dataset.journeyId = journey.id;
+    card.dataset.search = journeySearchHaystack(journey);
+
+    const totalStations =
+        1 + (journey.intermediates?.length || 0) + 1;
+
+    let timeline = "";
+
+    timeline += `
+        <div class="timeline-item">
+            <div class="station-name">${escapeHtml(journey.origin?.name || "?")}</div>
+            <div class="station-code">${escapeHtml(journey.origin?.code || "")}</div>
+        </div>
+    `;
+
+    (journey.intermediates || []).forEach(stop => {
+        timeline += `
+            <div class="timeline-item">
+                <div class="station-name">${escapeHtml(stop.name || "?")}</div>
+                <div class="station-code">${escapeHtml(stop.code || "")}</div>
+            </div>
+        `;
+    });
+
+    timeline += `
+        <div class="timeline-item">
+            <div class="station-name">${escapeHtml(journey.destination?.name || "?")}</div>
+            <div class="station-code">${escapeHtml(journey.destination?.code || "")}</div>
+        </div>
+    `;
+
+    card.innerHTML = `
+        <h3>
+            🚆 ${escapeHtml(journey.origin?.code || "?")}
+            →
+            ${escapeHtml(journey.destination?.code || "?")}
+        </h3>
+        <div class="journey-meta">
+            <span>🚉 ${totalStations} Stations</span>
+        </div>
+        <button type="button" class="expandRoute">▼ Expand Route</button>
+        <div class="timeline hidden">${timeline}</div>
+        <div class="journey-actions">
+            <button type="button" class="editJourney">✏ Edit</button>
+            <button type="button" class="deleteJourney">🗑 Delete</button>
+        </div>
+    `;
+
+    const expandBtn = card.querySelector(".expandRoute");
+    const timelineBox = card.querySelector(".timeline");
+
+    expandBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        timelineBox.classList.toggle("hidden");
+        expandBtn.innerHTML = timelineBox.classList.contains("hidden")
+            ? "▼ Expand Route"
+            : "▲ Hide Route";
+    });
+
+    card.addEventListener("click", (e) => {
+        if (e.target.closest("button")) return;
+        focusJourney(journey.id);
+    });
+
+    card.querySelector(".editJourney").addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        loadJourneyForEditing(journey);
+    });
+
+    const delBtn = card.querySelector(".deleteJourney");
+    const doDelete = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isBusy) return;
+
+        const needConfirm = window.__prefConfirmDelete !== false;
+            if (needConfirm && !window.confirm("Delete this journey?")) return;
+
+        isBusy = true;
+        delBtn.disabled = true;
+        delBtn.textContent = "…";
+
+        try {
+            await removeJourney(journey.id);
+            removeJourneyFromMap(journey.id);
+            visibleJourneyCount = 8;
+            await renderJourneys();
+            await loadStatistics();
+        } catch (err) {
+            console.error(err);
+            alert(err.message || "Failed to delete journey.");
+            delBtn.disabled = false;
+            delBtn.innerHTML = "🗑 Delete";
+        } finally {
+            isBusy = false;
+        }
+    };
+    delBtn.addEventListener("click", doDelete);
+
+    return card;
 }
 
 function escapeHtml(str) {
@@ -437,10 +499,7 @@ function loadJourneyForEditing(journey) {
 
     // Ensure journeys view is visible
     if (typeof window.switchView === "function") {
-        const journeysView = document.getElementById("view-journeys");
-        if (journeysView && !journeysView.classList.contains("active")) {
-            window.switchView("journeys");
-        }
+        window.switchView("add-journey");
     }
 
     const origin = document.getElementById("originInput");
@@ -448,27 +507,27 @@ function loadJourneyForEditing(journey) {
 
     if (!origin || !destination) return;
 
-    origin.value = `${journey.origin.name} (${journey.origin.code})`;
-    origin.dataset.name = journey.origin.name;
-    origin.dataset.code = journey.origin.code;
-    origin.dataset.lat = journey.origin.lat;
-    origin.dataset.lon = journey.origin.lon;
-    if (journey.origin.graph_node != null) {
-        origin.dataset.node = journey.origin.graph_node;
-    }
+    const fillStationInput = (input, stop) => {
+        if (!stop) return;
+        input.value = stop.code
+            ? `${stop.name || ""} (${stop.code})`
+            : (stop.name || "");
+        input.dataset.name = stop.name || "";
+        input.dataset.code = stop.code || "";
+        input.dataset.lat = stop.lat != null ? stop.lat : "";
+        input.dataset.lon = stop.lon != null ? stop.lon : "";
+        input.dataset.node =
+            stop.graph_node != null && stop.graph_node !== ""
+                ? String(stop.graph_node)
+                : "";
+    };
 
-    destination.value = `${journey.destination.name} (${journey.destination.code})`;
-    destination.dataset.name = journey.destination.name;
-    destination.dataset.code = journey.destination.code;
-    destination.dataset.lat = journey.destination.lat;
-    destination.dataset.lon = journey.destination.lon;
-    if (journey.destination.graph_node != null) {
-        destination.dataset.node = journey.destination.graph_node;
-    }
+    fillStationInput(origin, journey.origin);
+    fillStationInput(destination, journey.destination);
 
     clearIntermediateStations();
 
-    (journey.intermediates || []).forEach(stop => {
+    (journey.intermediates || []).forEach((stop) => {
         addIntermediateStation(stop);
     });
 
@@ -484,14 +543,21 @@ function loadJourneyForEditing(journey) {
 
     if (addJourneyBtn) addJourneyBtn.innerHTML = "💾 Save Changes";
 
-    if (typeof window.switchView === "function") {
-        window.switchView("journeys");
-    }
+    // Show cancel-edit control if present
+    const cancelBtn = document.getElementById("cancelEditJourneyBtn");
+    if (cancelBtn) cancelBtn.style.display = "";
+
+    const formTitle = document.querySelector("#addJourneyFormCard h3");
+    if (formTitle) formTitle.textContent = "Edit Journey";
 
     setTimeout(() => {
-        origin.scrollIntoView({ behavior: "smooth", block: "center" });
+        try {
+            updatePlannerPreviewFromForm();
+        } catch (_) {}
+        const form = document.getElementById("addJourneyFormCard");
+        form?.scrollIntoView({ behavior: "smooth", block: "start" });
         origin.focus();
-    }, 200);
+    }, 250);
 }
 
 // ==========================================
@@ -532,6 +598,14 @@ function resetJourneyForm() {
 
     if (addJourneyBtn) addJourneyBtn.innerHTML = "🚆 Add Journey";
 
+    const cancelBtn = document.getElementById("cancelEditJourneyBtn");
+    if (cancelBtn) cancelBtn.style.display = "none";
+
+    const formTitle = document.querySelector("#addJourneyFormCard h3");
+    if (formTitle) formTitle.textContent = "Add Journey";
+
+    try { clearPlannerPreview(); } catch (_) {}
+
 }
 
 
@@ -539,31 +613,99 @@ function resetJourneyForm() {
 // Journey Search
 // ==========================================
 
+function collectJourneyStations(journey) {
+    const list = [];
+    if (journey.origin) list.push(journey.origin);
+    (journey.intermediates || []).forEach((s) => list.push(s));
+    if (journey.destination) list.push(journey.destination);
+    return list;
+}
+
+/** Haystack kept for card dataset / legacy */
 function journeySearchHaystack(journey) {
     const parts = [];
-    const push = (s) => {
-        if (!s) return;
-        parts.push(String(s.name || ""), String(s.code || ""));
+    for (const s of collectJourneyStations(journey)) {
+        if (!s) continue;
+        parts.push(String(s.code || "").toLowerCase());
+        parts.push(String(s.name || "").toLowerCase());
+    }
+    return parts.join(" ");
+}
+
+/**
+ * Precise journey match:
+ * - Short alphanumeric queries (2–5 chars, no spaces) match STATION CODES only
+ *   (exact or prefix). Avoids false hits like "MAS" inside "Samastipur".
+ * - Longer / multi-word queries match code or station name.
+ */
+function journeyMatchesQuery(journey, rawQuery) {
+    const CODE_ALIASES = { srng: "sang", srang: "sang", cstm: "csmt" };
+    let q = String(rawQuery || "").trim().toLowerCase();
+    if (!q) return true;
+    if (CODE_ALIASES[q]) q = CODE_ALIASES[q];
+
+    const stations = collectJourneyStations(journey);
+    const tokens = q.split(/\s+/).filter(Boolean).map((tok) => CODE_ALIASES[tok] || tok);
+    const isCodeLike = (t) => /^[a-z0-9]{2,5}$/i.test(t);
+
+    const stationHitsToken = (s, token) => {
+        const code = String(s.code || "").toLowerCase().trim();
+        const name = String(s.name || "").toLowerCase().trim();
+        if (isCodeLike(token)) {
+            return code === token || (token.length >= 2 && code.startsWith(token));
+        }
+        return (
+            code === token ||
+            code.startsWith(token) ||
+            name === token ||
+            name.startsWith(token) ||
+            (token.length >= 3 && name.includes(token))
+        );
     };
-    push(journey.origin);
-    push(journey.destination);
-    (journey.intermediates || []).forEach(push);
-    return parts.join(" ").toLowerCase();
+
+    // Every token must match at least one station on the journey
+    return tokens.every((token) =>
+        stations.some((s) => s && stationHitsToken(s, token))
+    );
 }
 
 function applyJourneySearch(query) {
-    const q = String(query || "").trim().toLowerCase();
-    const cards = journeyList ? journeyList.querySelectorAll(".journey-card") : [];
-    let visible = 0;
-    cards.forEach((card) => {
-        const hay = card.dataset.search || "";
-        const show = !q || hay.includes(q);
-        card.style.display = show ? "" : "none";
-        if (show) visible += 1;
-    });
+    activeSearchQuery = String(query || "").trim();
+    if (!journeyList) return;
+
+    deleteAllBtn.remove();
+    loadMoreBtn.remove();
+    journeyList.innerHTML = "";
+
+    const q = activeSearchQuery;
+    const source = cachedJourneys.length ? cachedJourneys : [];
+    const matched = q
+        ? source.filter((j) => journeyMatchesQuery(j, q))
+        : source;
+
+    const toShow = q
+        ? matched
+        : matched.slice(0, visibleJourneyCount);
+
+    if (!source.length) {
+        journeyList.innerHTML = "<p>No journeys added yet.</p>";
+    } else if (q && matched.length === 0) {
+        journeyList.innerHTML = `<p class="empty-search">No journeys match “${escapeHtml(activeSearchQuery)}”.</p>`;
+    } else {
+        toShow.forEach((journey) => {
+            journeyList.appendChild(buildJourneyCard(journey));
+        });
+        if (!q && visibleJourneyCount < matched.length) {
+            journeyList.appendChild(loadMoreBtn);
+        }
+        if (source.length) journeyList.appendChild(deleteAllBtn);
+    }
+
     const countEl = document.getElementById("journeySearchCount");
     if (countEl) {
-        countEl.textContent = q ? `${visible} match${visible === 1 ? "" : "es"}` : "";
+        countEl.textContent = q
+            ? `${matched.length} match${matched.length === 1 ? "" : "es"}`
+            : "";
     }
 }
 

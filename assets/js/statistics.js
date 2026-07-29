@@ -23,110 +23,192 @@ function haversine(lat1, lon1, lat2, lon2) {
 
 // ==========================================
 // Major station code → State (high accuracy)
+// Prefer exact codes; coords are a fallback only.
 // ==========================================
 
 const STATION_STATE = {
     // Delhi / NCR
     NDLS: "Delhi", NZM: "Delhi", DLI: "Delhi", ANVT: "Delhi", DEE: "Delhi",
-    GZB: "Uttar Pradesh", TKD: "Delhi", SSB: "Delhi", HNZM: "Delhi",
-    // Punjab / Haryana / HP / UK
-    ASR: "Punjab", LDH: "Punjab", JUC: "Punjab", PTA: "Punjab", CDG: "Chandigarh",
+    TKD: "Delhi", SSB: "Delhi", HNZM: "Delhi", DSJ: "Delhi", PWL: "Haryana",
+    GZB: "Uttar Pradesh", MTC: "Uttar Pradesh", BTC: "Uttar Pradesh",
+    // Punjab / Haryana / HP / UK / Chandigarh
+    ASR: "Punjab", LDH: "Punjab", JUC: "Punjab", PTA: "Punjab", BEAS: "Punjab",
+    CDG: "Chandigarh",
     KKDE: "Haryana", UMB: "Haryana", ROK: "Haryana", PNP: "Haryana",
-    KLK: "Haryana", SML: "Himachal Pradesh", UNA: "Himachal Pradesh",
-    DDN: "Uttarakhand", HW: "Uttarakhand", KGM: "Uttarakhand",
+    KLK: "Haryana", KUN: "Haryana", JIND: "Haryana", RE: "Haryana",
+    SML: "Himachal Pradesh", UNA: "Himachal Pradesh", NLDM: "Himachal Pradesh",
+    DDN: "Uttarakhand", HW: "Uttarakhand", KGM: "Uttarakhand", HDW: "Uttarakhand",
     // Rajasthan
     JP: "Rajasthan", AII: "Rajasthan", UDZ: "Rajasthan", BKN: "Rajasthan",
     JU: "Rajasthan", KOTA: "Rajasthan", SWM: "Rajasthan", BHL: "Rajasthan",
+    ABR: "Rajasthan", FL: "Rajasthan", MJ: "Rajasthan", COR: "Rajasthan",
     // Gujarat
     ADI: "Gujarat", BRC: "Gujarat", ST: "Gujarat", RJT: "Gujarat",
-    BHUJ: "Gujarat", VAPI: "Gujarat", BIM: "Gujarat",
+    BHUJ: "Gujarat", VAPI: "Gujarat", BIM: "Gujarat", GIMB: "Gujarat",
+    OKHA: "Gujarat", SUNR: "Gujarat", BVC: "Gujarat", ANND: "Gujarat",
     // Maharashtra
-    CSTM: "Maharashtra", LTT: "Maharashtra", BDTS: "Maharashtra", PUNE: "Maharashtra",
-    NGP: "Maharashtra", KYN: "Maharashtra", TNA: "Maharashtra", DR: "Maharashtra",
-    CSN: "Maharashtra", MMR: "Maharashtra", NK: "Maharashtra",
+    CSTM: "Maharashtra", CSMT: "Maharashtra", LTT: "Maharashtra", BDTS: "Maharashtra",
+    PUNE: "Maharashtra", NGP: "Maharashtra", KYN: "Maharashtra", TNA: "Maharashtra",
+    DR: "Maharashtra", CSN: "Maharashtra", MMR: "Maharashtra", NK: "Maharashtra",
+    JL: "Maharashtra", PNVL: "Maharashtra", RN: "Maharashtra", SWV: "Maharashtra",
+    KOP: "Maharashtra", SNSI: "Maharashtra", AK: "Maharashtra", BD: "Maharashtra",
+    MMCT: "Maharashtra",
     // Goa
-    MAO: "Goa", VSG: "Goa",
+    MAO: "Goa", VSG: "Goa", THVM: "Goa",
     // Karnataka
     SBC: "Karnataka", YPR: "Karnataka", UBL: "Karnataka", MYS: "Karnataka",
-    BJP: "Karnataka", HUB: "Karnataka",
+    BJP: "Karnataka", HUB: "Karnataka", MAJN: "Karnataka", BNC: "Karnataka",
+    HAS: "Karnataka", DWR: "Karnataka",
     // Kerala
     TVC: "Kerala", ERS: "Kerala", CLT: "Kerala", CAN: "Kerala",
-    QLN: "Kerala", TCR: "Kerala", ALLP: "Kerala",
+    QLN: "Kerala", TCR: "Kerala", ALLP: "Kerala", KTYM: "Kerala",
     // Tamil Nadu
     MAS: "Tamil Nadu", MS: "Tamil Nadu", CBE: "Tamil Nadu", MDU: "Tamil Nadu",
-    TPJ: "Tamil Nadu", SA: "Tamil Nadu", TBM: "Tamil Nadu",
-    // Andhra / Telangana
-    SC: "Telangana", HYB: "Telangana", KCG: "Telangana",
+    TPJ: "Tamil Nadu", SA: "Tamil Nadu", TBM: "Tamil Nadu", TEN: "Tamil Nadu",
+    CUPJ: "Tamil Nadu", VRI: "Tamil Nadu", MV: "Tamil Nadu",
+    // Telangana
+    SC: "Telangana", HYB: "Telangana", KCG: "Telangana", WL: "Telangana",
+    KZJ: "Telangana", NZB: "Telangana", RDM: "Telangana",
+    // Andhra Pradesh
     BZA: "Andhra Pradesh", VSKP: "Andhra Pradesh", GNT: "Andhra Pradesh",
-    TPTY: "Andhra Pradesh", RU: "Andhra Pradesh",
-    // Madhya Pradesh / Chhattisgarh
+    TPTY: "Andhra Pradesh", RU: "Andhra Pradesh", RJY: "Andhra Pradesh",
+    NLR: "Andhra Pradesh", GDR: "Andhra Pradesh",
+    // Madhya Pradesh
     BPL: "Madhya Pradesh", JBP: "Madhya Pradesh", INDB: "Madhya Pradesh",
-    GWL: "Madhya Pradesh", RKMP: "Madhya Pradesh",
+    GWL: "Madhya Pradesh", RKMP: "Madhya Pradesh", BINA: "Madhya Pradesh",
+    UJN: "Madhya Pradesh", RTM: "Madhya Pradesh", ET: "Madhya Pradesh",
+    KMZ: "Madhya Pradesh", KTE: "Madhya Pradesh", MML: "Madhya Pradesh",
+    // Chhattisgarh
     R: "Chhattisgarh", BSP: "Chhattisgarh", DURG: "Chhattisgarh",
-    // Uttar Pradesh
-    LKO: "Uttar Pradesh", CNB: "Uttar Pradesh", ALD: "Uttar Pradesh",
-    BSB: "Uttar Pradesh", VNS: "Uttar Pradesh", GKP: "Uttar Pradesh",
-    MB: "Uttar Pradesh", BE: "Uttar Pradesh", PRYJ: "Uttar Pradesh",
-    // Bihar / Jharkhand
+    RIG: "Chhattisgarh", SDL: "Chhattisgarh",
+    // Uttar Pradesh (many misclassified via coords)
+    LKO: "Uttar Pradesh", LJN: "Uttar Pradesh", CNB: "Uttar Pradesh",
+    ALD: "Uttar Pradesh", PRYJ: "Uttar Pradesh", BSB: "Uttar Pradesh",
+    VNS: "Uttar Pradesh", GKP: "Uttar Pradesh", MB: "Uttar Pradesh",
+    BE: "Uttar Pradesh", VGLJ: "Uttar Pradesh", VGLB: "Uttar Pradesh",
+    JHS: "Uttar Pradesh", PCOI: "Uttar Pradesh", MZP: "Uttar Pradesh",
+    MBD: "Uttar Pradesh", MBDP: "Uttar Pradesh", BOY: "Uttar Pradesh",
+    GYN: "Uttar Pradesh", JNH: "Uttar Pradesh", SFG: "Uttar Pradesh",
+    MKP: "Uttar Pradesh", GOY: "Uttar Pradesh", ALJN: "Uttar Pradesh",
+    TDL: "Uttar Pradesh", FBD: "Uttar Pradesh", RBL: "Uttar Pradesh",
+    SLN: "Uttar Pradesh", PBH: "Uttar Pradesh", AYC: "Uttar Pradesh",
+    FD: "Uttar Pradesh", BST: "Uttar Pradesh", MUR: "Uttar Pradesh",
+    // Bihar
     PNBE: "Bihar", RJPB: "Bihar", DBG: "Bihar", MFP: "Bihar",
-    HTE: "Jharkhand", RNC: "Jharkhand", DHN: "Jharkhand",
-    // West Bengal / Odisha / Assam
+    GAYA: "Bihar", BJU: "Bihar", DNR: "Bihar", HJP: "Bihar",
+    PPTA: "Bihar", SEE: "Bihar", SPJ: "Bihar", KIul: "Bihar",
+    KIUL: "Bihar", JMP: "Bihar", MKA: "Bihar", BGP: "Bihar",
+    NBJU: "Bihar",
+    // Jharkhand
+    HTE: "Jharkhand", RNC: "Jharkhand", DHN: "Jharkhand", TATA: "Jharkhand",
+    BKSC: "Jharkhand", GMO: "Jharkhand", BRKA: "Jharkhand", HZBN: "Jharkhand",
+    MESR: "Jharkhand", PTRU: "Jharkhand", RRME: "Jharkhand", KQR: "Jharkhand",
+    CRP: "Jharkhand",
+    // West Bengal
     HWH: "West Bengal", SDAH: "West Bengal", KOAA: "West Bengal",
-    NJP: "West Bengal", ASN: "West Bengal",
-    BBS: "Odisha", PURI: "Odisha", CTC: "Odisha",
-    GHY: "Assam", DBRG: "Assam", NTSK: "Assam",
-    // Others
-    JAT: "Jammu and Kashmir", SVDK: "Jammu and Kashmir",
-    GIMB: "Gujarat", OKHA: "Gujarat"
+    NJP: "West Bengal", ASN: "West Bengal", BWN: "West Bengal",
+    HIJ: "West Bengal", PRR: "West Bengal", MLDT: "West Bengal",
+    SBG: "West Bengal", RJL: "West Bengal", TPH: "Jharkhand",
+    KGP: "West Bengal", DGR: "West Bengal", BDC: "West Bengal",
+    // Odisha
+    BBS: "Odisha", PURI: "Odisha", CTC: "Odisha", BAM: "Odisha",
+    KUR: "Odisha", SBP: "Odisha", ROU: "Odisha",
+    // Assam & Northeast
+    GHY: "Assam", DBRG: "Assam", NTSK: "Assam", NBQ: "Assam",
+    KYQ: "Assam", BPB: "Assam", GLPT: "Assam", HJI: "Assam",
+    NHLG: "Assam", LMG: "Assam", JTTN: "Assam", MXN: "Assam",
+    // Mizoram / Manipur / Tripura / Nagaland / Meghalaya
+    BHRB: "Mizoram", SRANG: "Mizoram", SANG: "Mizoram", SRNG: "Mizoram", SRANG: "Mizoram", AIZL: "Mizoram",
+    DMV: "Nagaland", DMR: "Tripura", AGTL: "Tripura",
+    GHYX: "Assam",
+    // J&K / Ladakh
+    JAT: "Jammu and Kashmir", SVDK: "Jammu and Kashmir", UHP: "Jammu and Kashmir",
+    BAHL: "Jammu and Kashmir",
+    // Others seen in user data
+    KIR: "Bihar", KNE: "West Bengal", LAV: "West Bengal", GAGA: "Bihar",
+    PPTA: "Bihar"
 };
 
+// Normalize alternate codes
+STATION_STATE.CSMT = STATION_STATE.CSMT || "Maharashtra";
+STATION_STATE.CSTM = STATION_STATE.CSTM || "Maharashtra";
+
 // ==========================================
-// Improved geographic State classifier
+// Geographic State classifier (fallback only)
+// Order matters: small / eastern states before large western boxes.
 // ==========================================
 
 function getStateFromCoords(lat, lon) {
-    if (lat >= 28.4 && lat <= 28.9 && lon >= 76.8 && lon <= 77.4) return "Delhi";
-    if (lat >= 30.6 && lat <= 30.9 && lon >= 76.6 && lon <= 77.0) return "Chandigarh";
-    if (lat >= 15.2 && lat <= 15.6 && lon >= 73.7 && lon <= 74.2) return "Goa";
+    if (lat == null || lon == null || !Number.isFinite(+lat) || !Number.isFinite(+lon)) {
+        return null;
+    }
+    lat = +lat; lon = +lon;
 
-    if (lat >= 29.5 && lat <= 32.6 && lon >= 73.8 && lon <= 77.0) return "Punjab";
-    if (lat >= 27.5 && lat <= 30.9 && lon >= 74.3 && lon <= 77.6) return "Haryana";
-    if (lat >= 30.2 && lat <= 33.2 && lon >= 75.5 && lon <= 79.0) return "Himachal Pradesh";
-    if (lat >= 28.7 && lat <= 31.5 && lon >= 77.5 && lon <= 81.0) return "Uttarakhand";
-    if (lat >= 23.0 && lat <= 30.3 && lon >= 69.4 && lon <= 78.3) return "Rajasthan";
-    if (lat >= 20.1 && lat <= 24.7 && lon >= 68.1 && lon <= 74.5) return "Gujarat";
-    if (lat >= 15.6 && lat <= 22.1 && lon >= 72.6 && lon <= 80.9) return "Maharashtra";
-    if (lat >= 11.5 && lat <= 18.5 && lon >= 74.0 && lon <= 78.6) return "Karnataka";
-    if (lat >= 8.1 && lat <= 12.8 && lon >= 74.8 && lon <= 77.5) return "Kerala";
-    if (lat >= 8.0 && lat <= 13.6 && lon >= 76.2 && lon <= 80.4) return "Tamil Nadu";
-    if (lat >= 15.8 && lat <= 19.9 && lon >= 77.2 && lon <= 81.8) return "Telangana";
-    if (lat >= 12.6 && lat <= 19.2 && lon >= 76.7 && lon <= 84.8) return "Andhra Pradesh";
-    if (lat >= 21.0 && lat <= 26.9 && lon >= 74.0 && lon <= 82.8) return "Madhya Pradesh";
-    if (lat >= 17.8 && lat <= 24.1 && lon >= 80.2 && lon <= 84.4) return "Chhattisgarh";
-    if (lat >= 23.8 && lat <= 30.4 && lon >= 77.0 && lon <= 84.7) return "Uttar Pradesh";
-    if (lat >= 24.2 && lat <= 27.7 && lon >= 83.3 && lon <= 88.3) return "Bihar";
-    if (lat >= 21.9 && lat <= 25.4 && lon >= 83.3 && lon <= 87.9) return "Jharkhand";
-    if (lat >= 21.4 && lat <= 27.3 && lon >= 85.8 && lon <= 89.9) return "West Bengal";
-    if (lat >= 17.8 && lat <= 22.6 && lon >= 81.3 && lon <= 87.5) return "Odisha";
-    if (lat >= 24.1 && lat <= 28.0 && lon >= 89.7 && lon <= 96.0) return "Assam";
-    if (lat >= 22.0 && lat <= 29.5 && lon >= 91.0 && lon <= 97.4) return "Northeast";
-    if (lat >= 32.0 && lat <= 37.1 && lon >= 73.5 && lon <= 80.5) return "Jammu and Kashmir";
-    if (lat >= 8.0 && lat <= 13.0 && lon >= 92.0 && lon <= 94.0) return "Andaman";
+    // Union territories / tiny regions first
+    if (lat >= 28.40 && lat <= 28.88 && lon >= 76.84 && lon <= 77.35) return "Delhi";
+    if (lat >= 30.68 && lat <= 30.80 && lon >= 76.70 && lon <= 76.85) return "Chandigarh";
+    if (lat >= 15.10 && lat <= 15.80 && lon >= 73.70 && lon <= 74.30) return "Goa";
+    if (lat >= 11.50 && lat <= 13.20 && lon >= 92.20 && lon <= 93.20) return "Andaman and Nicobar Islands";
+    if (lat >= 34.00 && lat <= 35.50 && lon >= 76.00 && lon <= 78.50) return "Ladakh";
 
-    if (lat >= 28) return "North India";
-    if (lat >= 21) return "Central India";
-    return "South India";
+    // Northeast (before Assam mega-box)
+    if (lat >= 21.90 && lat <= 24.55 && lon >= 92.15 && lon <= 93.55) return "Mizoram";
+    if (lat >= 22.85 && lat <= 24.55 && lon >= 91.10 && lon <= 92.40) return "Tripura";
+    if (lat >= 23.80 && lat <= 25.70 && lon >= 93.00 && lon <= 94.85) return "Manipur";
+    if (lat >= 25.15 && lat <= 27.05 && lon >= 93.25 && lon <= 95.25) return "Nagaland";
+    if (lat >= 25.00 && lat <= 26.15 && lon >= 89.75 && lon <= 92.85) return "Meghalaya";
+    if (lat >= 26.85 && lat <= 28.35 && lon >= 88.00 && lon <= 89.10) return "Sikkim";
+    if (lat >= 24.10 && lat <= 28.00 && lon >= 89.70 && lon <= 96.10) return "Assam";
+    if (lat >= 26.50 && lat <= 29.50 && lon >= 91.50 && lon <= 97.40) return "Arunachal Pradesh";
+
+    // Jammu & Kashmir
+    if (lat >= 32.20 && lat <= 35.20 && lon >= 73.80 && lon <= 80.30) return "Jammu and Kashmir";
+
+    // North
+    if (lat >= 30.20 && lat <= 33.20 && lon >= 75.50 && lon <= 79.10) return "Himachal Pradesh";
+    if (lat >= 28.70 && lat <= 31.50 && lon >= 77.55 && lon <= 81.05) return "Uttarakhand";
+    if (lat >= 29.40 && lat <= 32.55 && lon >= 73.85 && lon <= 76.85) return "Punjab";
+    // Haryana (exclude Delhi box already handled)
+    if (lat >= 27.65 && lat <= 30.95 && lon >= 74.45 && lon <= 77.60) return "Haryana";
+
+    // South (before large central boxes)
+    if (lat >= 8.05 && lat <= 12.85 && lon >= 74.80 && lon <= 77.55) return "Kerala";
+    if (lat >= 8.05 && lat <= 13.60 && lon >= 76.20 && lon <= 80.40) return "Tamil Nadu";
+    if (lat >= 11.50 && lat <= 18.55 && lon >= 74.00 && lon <= 78.55) return "Karnataka";
+
+    // Telangana before Andhra / Maharashtra east
+    if (lat >= 15.85 && lat <= 19.95 && lon >= 77.25 && lon <= 81.20) return "Telangana";
+    // Coastal Andhra / Rayalaseema
+    if (lat >= 12.55 && lat <= 19.20 && lon >= 76.75 && lon <= 84.85) return "Andhra Pradesh";
+
+    // East
+    if (lat >= 21.45 && lat <= 27.25 && lon >= 85.80 && lon <= 89.90) return "West Bengal";
+    if (lat >= 21.90 && lat <= 25.55 && lon >= 83.25 && lon <= 87.95) return "Jharkhand";
+    if (lat >= 24.20 && lat <= 27.65 && lon >= 83.25 && lon <= 88.20) return "Bihar";
+    if (lat >= 17.75 && lat <= 22.60 && lon >= 81.30 && lon <= 87.55) return "Odisha";
+
+    // Central
+    if (lat >= 17.75 && lat <= 24.15 && lon >= 80.15 && lon <= 84.45) return "Chhattisgarh";
+    // UP before MP (Jhansi / Lucknow often fall near MP boxes)
+    if (lat >= 23.85 && lat <= 30.45 && lon >= 77.05 && lon <= 84.75) return "Uttar Pradesh";
+    if (lat >= 21.05 && lat <= 26.90 && lon >= 74.00 && lon <= 82.85) return "Madhya Pradesh";
+
+    // West
+    if (lat >= 23.00 && lat <= 30.25 && lon >= 69.40 && lon <= 78.20) return "Rajasthan";
+    if (lat >= 20.05 && lat <= 24.75 && lon >= 68.10 && lon <= 74.55) return "Gujarat";
+    if (lat >= 15.55 && lat <= 22.05 && lon >= 72.55 && lon <= 80.90) return "Maharashtra";
+
+    return null;
 }
 
 function resolveState(code, lat, lon) {
-    if (code && STATION_STATE[code]) return STATION_STATE[code];
+    const c = code ? String(code).trim().toUpperCase() : "";
+    if (c && STATION_STATE[c]) return STATION_STATE[c];
+    // Try alternate code forms
+    if (c && STATION_STATE[c.replace(/\s+/g, "")]) return STATION_STATE[c.replace(/\s+/g, "")];
     if (lat != null && lon != null) {
         const s = getStateFromCoords(lat, lon);
-        // Ignore coarse regional fallbacks for accuracy
-        if (s && !s.includes("India") && s !== "Northeast" && s !== "Andaman") return s;
-        if (s === "Northeast") return "Assam"; // better than generic
-        if (s === "Andaman") return "Andaman and Nicobar Islands";
-        return s && !s.includes("India") ? s : null;
+        if (s) return s;
     }
     return null;
 }
@@ -240,6 +322,10 @@ export function resolveZoneCode(code, lat, lon) {
     return resolveZone(code, lat, lon);
 }
 
+export function resolveStateCode(code, lat, lon) {
+    return resolveState(code, lat, lon);
+}
+
 
 function formatTravelTime(totalHours) {
     const h = Math.floor(totalHours);
@@ -286,7 +372,10 @@ export function calculateJourneyStatistics(journeys, manualZones = []) {
         const route = journey.route || [];
         let distance = 0;
 
-        if (route.length > 1) {
+        // Prefer stored distance computed from full path at save time
+        if (journey.distanceKm != null && Number(journey.distanceKm) > 0) {
+            distance = Number(journey.distanceKm);
+        } else if (route.length > 1) {
             for (let i = 1; i < route.length; i++) {
                 distance += haversine(
                     route[i - 1].lat, route[i - 1].lon,
