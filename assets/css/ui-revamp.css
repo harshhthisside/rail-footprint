@@ -1191,9 +1191,6 @@ body.dark .about-header-art .about-train-art.vb-about {
 }
 
 /* About visibility + owner stats admin */
-#aboutNavItem[style*="display: none"] {
-    display: none !important;
-}
 .admin-about-form input[type="number"] {
     width: 100%;
     max-width: 220px;

@@ -22,7 +22,8 @@ import {
     updateDoc,
     getDoc,
     setDoc,
-    writeBatch
+    writeBatch,
+    onSnapshot
 }
 from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
@@ -503,16 +504,9 @@ export async function updateDisplayName(name) {
     return cleaned;
 }
 
-
 // ==========================================
 // Public About config (visible to all users)
 // Document: appConfig/about
-// Requires Firestore rules:
-//   match /appConfig/{docId} {
-//     allow read: if true;
-//     allow write: if request.auth != null
-//       && request.auth.token.email == 'harshcaptain2310@gmail.com';
-//   }
 // ==========================================
 
 const publicAboutRef = () => doc(db, "appConfig", "about");
@@ -521,21 +515,51 @@ export async function loadPublicAboutConfig() {
     try {
         const snap = await getDoc(publicAboutRef());
         if (!snap.exists()) return null;
-        return snap.data() || null;
+        const data = snap.data() || null;
+        if (data) data.__exists = true;
+        return data;
     } catch (e) {
-        console.warn("loadPublicAboutConfig", e);
+        console.warn("loadPublicAboutConfig", e?.code || e?.message || e);
         return null;
     }
 }
 
+/** Full write so visibility is never stuck from a partial merge. */
 export async function savePublicAboutConfig(payload) {
     if (!auth.currentUser)
         throw new Error("Please sign in first.");
-    const data = {
-        ...(payload || {}),
-        updatedAt: Date.now(),
-        updatedBy: auth.currentUser.uid
-    };
-    await setDoc(publicAboutRef(), data, { merge: true });
-    return data;
+    const body = { ...(payload || {}) };
+    // Force boolean visibility for every client
+    body.visible = body.visible !== false;
+    body.updatedAt = Date.now();
+    body.updatedBy = auth.currentUser.uid;
+    body.updatedEmail = (auth.currentUser.email || "").toLowerCase();
+    await setDoc(publicAboutRef(), body, { merge: false });
+    return body;
+}
+
+/** Live updates for all open tabs / users */
+export function subscribePublicAboutConfig(onData, onError) {
+    try {
+        return onSnapshot(
+            publicAboutRef(),
+            (snap) => {
+                if (!snap.exists()) {
+                    onData && onData(null);
+                    return;
+                }
+                const data = snap.data() || {};
+                data.__exists = true;
+                onData && onData(data);
+            },
+            (err) => {
+                console.warn("subscribePublicAboutConfig", err?.code || err?.message || err);
+                onError && onError(err);
+            }
+        );
+    } catch (e) {
+        console.warn("subscribePublicAboutConfig setup", e);
+        onError && onError(e);
+        return () => {};
+    }
 }

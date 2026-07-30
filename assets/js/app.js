@@ -83,7 +83,8 @@ import {
     initializeAboutAdmin,
     renderAboutPage,
     applyAboutVisibility,
-    refreshAboutFromServer
+    refreshAboutFromServer,
+    startAboutLiveSync
 } from "./about.js";
 
 
@@ -485,10 +486,12 @@ if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
         renderAboutPage();
         applyAboutVisibility();
         // Public About (content + visibility) for every visitor
+        startAboutLiveSync();
         refreshAboutFromServer().catch(() => {});
         window.renderAboutPage = renderAboutPage;
         window.applyAboutVisibility = applyAboutVisibility;
         window.refreshAboutFromServer = refreshAboutFromServer;
+        window.startAboutLiveSync = startAboutLiveSync;
         window.setProfileAvatar = setProfileAvatar;
         window.avatarDataUrl = avatarDataUrl;
         window.updateAdminVisibility = updateAdminVisibility;

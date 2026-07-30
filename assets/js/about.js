@@ -1,11 +1,12 @@
 // ==========================================
 // About page — public content (Firestore) + local cache
-// Owner stats + visibility apply to ALL users once admin saves.
+// Server is source of truth for visibility + content for ALL users.
 // ==========================================
 
 import {
     loadPublicAboutConfig,
-    savePublicAboutConfig
+    savePublicAboutConfig,
+    subscribePublicAboutConfig
 } from "./firestore.js";
 
 const ABOUT_KEY = "rf_about_content_v1";
@@ -35,9 +36,18 @@ const DEFAULT_ABOUT = {
     visible: true
 };
 
+let unsubAbout = null;
+let serverHydrated = false;
+
 function normalizeAbout(p) {
     const src = p && typeof p === "object" ? p : {};
     const stats = src.stats && typeof src.stats === "object" ? src.stats : {};
+    // Explicit: only hide when visible === false (boolean or string)
+    const visRaw = src.visible;
+    const visible =
+        visRaw === false || visRaw === "false" || visRaw === 0 || visRaw === "0"
+            ? false
+            : true;
     return {
         name: src.name || DEFAULT_ABOUT.name,
         role: src.role || DEFAULT_ABOUT.role,
@@ -55,7 +65,7 @@ function normalizeAbout(p) {
             stations: Number(stats.stations) || 0,
             distance: Number(stats.distance) || 0
         },
-        visible: src.visible === false ? false : true
+        visible
     };
 }
 
@@ -63,19 +73,13 @@ function loadAboutLocal() {
     try {
         const raw = localStorage.getItem(ABOUT_KEY);
         if (!raw) {
-            // legacy visibility-only key
             const vis = localStorage.getItem(ABOUT_VIS_KEY);
             const base = structuredClone(DEFAULT_ABOUT);
             if (vis === "0" || vis === "false") base.visible = false;
             return base;
         }
         const p = JSON.parse(raw);
-        const data = normalizeAbout(p);
-        if (p.visible === undefined) {
-            const vis = localStorage.getItem(ABOUT_VIS_KEY);
-            if (vis === "0" || vis === "false") data.visible = false;
-        }
-        return data;
+        return normalizeAbout(p);
     } catch (_) {
         return structuredClone(DEFAULT_ABOUT);
     }
@@ -83,19 +87,16 @@ function loadAboutLocal() {
 
 function saveAboutLocal(data) {
     const n = normalizeAbout(data);
-    localStorage.setItem(ABOUT_KEY, JSON.stringify(n));
-    localStorage.setItem(ABOUT_VIS_KEY, n.visible ? "1" : "0");
-    localStorage.setItem(ABOUT_CACHE_TS, String(Date.now()));
+    try {
+        localStorage.setItem(ABOUT_KEY, JSON.stringify(n));
+        localStorage.setItem(ABOUT_VIS_KEY, n.visible ? "1" : "0");
+        localStorage.setItem(ABOUT_CACHE_TS, String(Date.now()));
+    } catch (_) {}
     return n;
 }
 
-/** Cached about (sync). Prefer after refreshAboutFromServer(). */
 export function loadAbout() {
     return loadAboutLocal();
-}
-
-function saveAbout(data) {
-    return saveAboutLocal(data);
 }
 
 export function isAboutVisible() {
@@ -107,45 +108,100 @@ export function setAboutVisible(visible) {
     data.visible = !!visible;
     saveAboutLocal(data);
     applyAboutVisibility();
-    // Fire-and-forget public sync (admin only succeeds under rules)
-    publishAboutToServer(data).catch(() => {});
+    publishAboutToServer(data).catch((e) => console.warn("setAboutVisible publish", e));
 }
 
-/** Pull public About from Firestore so every browser sees the same content. */
+function applyServerPayload(remote) {
+    if (!remote) {
+        // No public doc yet → default visible (show About)
+        if (!serverHydrated) {
+            const local = loadAboutLocal();
+            // Prefer showing if never published
+            if (local.visible === false && !localStorage.getItem(ABOUT_CACHE_TS)) {
+                local.visible = true;
+                saveAboutLocal(local);
+            }
+            applyAboutVisibility();
+        }
+        return loadAboutLocal();
+    }
+    const data = normalizeAbout(remote);
+    saveAboutLocal(data);
+    serverHydrated = true;
+    renderAboutPage();
+    applyAboutVisibility();
+    return data;
+}
+
 export async function refreshAboutFromServer() {
     try {
         const remote = await loadPublicAboutConfig();
-        if (!remote) return loadAboutLocal();
-        const data = normalizeAbout(remote);
-        saveAboutLocal(data);
-        renderAboutPage();
-        applyAboutVisibility();
-        return data;
+        return applyServerPayload(remote);
     } catch (e) {
         console.warn("refreshAboutFromServer", e);
+        applyAboutVisibility();
         return loadAboutLocal();
     }
 }
 
+/** Realtime: every open client updates when admin saves / toggles */
+export function startAboutLiveSync() {
+    if (unsubAbout) {
+        try {
+            unsubAbout();
+        } catch (_) {}
+        unsubAbout = null;
+    }
+    unsubAbout = subscribePublicAboutConfig(
+        (remote) => {
+            applyServerPayload(remote);
+            // Keep admin form in sync if open
+            try {
+                fillAdminAboutForm();
+            } catch (_) {}
+        },
+        () => {
+            // fallback one-shot
+            refreshAboutFromServer().catch(() => {});
+        }
+    );
+    return unsubAbout;
+}
+
 async function publishAboutToServer(data) {
     const payload = normalizeAbout(data);
-    await savePublicAboutConfig(payload);
-    return payload;
+    // Always include explicit boolean
+    payload.visible = payload.visible !== false;
+    const saved = await savePublicAboutConfig(payload);
+    saveAboutLocal(saved);
+    serverHydrated = true;
+    applyAboutVisibility();
+    return saved;
 }
 
 export function applyAboutVisibility() {
     const visible = isAboutVisible();
     document.querySelectorAll('.nav-item[data-view="about"]').forEach((el) => {
-        el.style.display = visible ? "" : "none";
+        if (visible) {
+            el.style.removeProperty("display");
+            el.hidden = false;
+            el.setAttribute("aria-hidden", "false");
+        } else {
+            el.style.display = "none";
+            el.hidden = true;
+            el.setAttribute("aria-hidden", "true");
+        }
     });
+
     const aboutView = document.getElementById("view-about");
     if (!visible && aboutView && aboutView.classList.contains("active")) {
         const adminNav = document.getElementById("adminNavItem");
-        const isAdminNav = adminNav && adminNav.style.display !== "none";
+        const isAdminNav = adminNav && adminNav.style.display !== "none" && !adminNav.hidden;
         if (!isAdminNav && typeof window.switchView === "function") {
             window.switchView("dashboard", { skipHistory: true });
         }
     }
+
     const btn = document.getElementById("adminToggleAboutVisibility");
     if (btn) {
         btn.textContent = visible ? "Hide About section" : "Show About section";
@@ -155,8 +211,8 @@ export function applyAboutVisibility() {
     const lbl = document.getElementById("adminAboutVisibilityStatus");
     if (lbl) {
         lbl.textContent = visible
-            ? "About is visible in the sidebar for all users (public)."
-            : "About is hidden from all users. Admin can still open it via Quick navigation.";
+            ? "About is visible in the sidebar for all users (synced from server)."
+            : "About is hidden for all users (synced from server). Admin can still open it via Quick navigation.";
     }
 }
 
@@ -234,6 +290,12 @@ export function renderAboutPage() {
     if (av) {
         av.src = data.avatar || DEFAULT_ABOUT.avatar;
         av.alt = data.name || "Developer";
+        av.onerror = () => {
+            av.onerror = null;
+            if (typeof window.avatarDataUrl === "function") {
+                av.src = window.avatarDataUrl(data.name || "HR", { bg: "#4f46e5" });
+            }
+        };
     }
 
     const tags = document.getElementById("aboutTags");
@@ -356,32 +418,38 @@ export function initializeAboutAdmin() {
         saveAboutLocal(data);
         renderAboutPage();
         const st = document.getElementById("adminAboutStatus");
-        if (st) st.textContent = "Saving to public config…";
+        if (st) st.textContent = "Publishing to all users…";
         try {
             await publishAboutToServer(data);
-            if (st) st.textContent = "About saved publicly. All users will see these changes after refresh.";
+            if (st) {
+                st.textContent = data.visible
+                    ? "Published. About is visible for all users."
+                    : "Published. About is hidden for all users.";
+            }
         } catch (e) {
             console.error(e);
             if (st) {
                 st.textContent =
-                    "Saved on this device only. Public sync failed — add Firestore rules for appConfig/about (read: true, write: admin). " +
-                    (e?.message || "");
+                    "Saved on this device only. Public sync failed: " +
+                    (e?.code || e?.message || e) +
+                    " — check appConfig rules and that you are signed in as harshcaptain2310@gmail.com";
             }
         }
     });
 
     document.getElementById("adminResetAbout")?.addEventListener("click", async () => {
-        if (!confirm("Reset About page to defaults and publish?")) return;
+        if (!confirm("Reset About page to defaults and publish to everyone?")) return;
         const data = structuredClone(DEFAULT_ABOUT);
+        data.visible = true;
         saveAboutLocal(data);
         fillAdminAboutForm();
         renderAboutPage();
         const st = document.getElementById("adminAboutStatus");
         try {
             await publishAboutToServer(data);
-            if (st) st.textContent = "Reset to defaults and published.";
+            if (st) st.textContent = "Reset to defaults and published (About visible).";
         } catch (e) {
-            if (st) st.textContent = "Reset locally. Public publish failed: " + (e?.message || e);
+            if (st) st.textContent = "Reset locally. Publish failed: " + (e?.message || e);
         }
     });
 
@@ -397,7 +465,7 @@ export function initializeAboutAdmin() {
             }
         } catch (e) {
             if (st) {
-                st.textContent = `Stats saved locally (${stats.journeys}/${stats.stations}). Public sync failed — check Firestore rules.`;
+                st.textContent = `Stats saved locally. Publish failed: ${e?.code || e?.message || e}`;
             }
         }
     });
@@ -409,26 +477,35 @@ export function initializeAboutAdmin() {
         saveAboutLocal(data);
         applyAboutVisibility();
         const st = document.getElementById("adminAboutStatus");
-        if (st) st.textContent = next ? "Publishing: show About…" : "Publishing: hide About…";
+        if (st) st.textContent = next ? "Publishing: SHOW About for everyone…" : "Publishing: HIDE About for everyone…";
         try {
             await publishAboutToServer(data);
+            // Verify read-back
+            const remote = await loadPublicAboutConfig();
+            const ok = remote && remote.visible !== false && next === true || remote && remote.visible === false && next === false || (remote && (remote.visible !== false) === next);
             if (st) {
-                st.textContent = next
-                    ? "About is now visible for all users."
-                    : "About is now hidden for all users.";
+                if (remote && (remote.visible !== false) === next) {
+                    st.textContent = next
+                        ? "About is now visible for all users (confirmed on server)."
+                        : "About is now hidden for all users (confirmed on server).";
+                } else {
+                    st.textContent =
+                        "Toggle saved locally but server value looks different. Open Firebase → appConfig/about and check the visible field.";
+                }
             }
+            applyAboutVisibility();
         } catch (e) {
             if (st) {
                 st.textContent =
-                    "Visibility changed on this device only. Public sync failed — update Firestore rules for appConfig/about. " +
-                    (e?.message || "");
+                    "Visibility changed only on this device. Publish failed: " +
+                    (e?.code || e?.message || e);
             }
         }
     });
 
     fillAdminAboutForm();
     renderAboutPage();
-    // Load public config in background
+    startAboutLiveSync();
     refreshAboutFromServer()
         .then(() => fillAdminAboutForm())
         .catch(() => {});
@@ -442,3 +519,4 @@ window.renderAboutPage = renderAboutPage;
 window.applyAboutVisibility = applyAboutVisibility;
 window.isAboutVisible = isAboutVisible;
 window.refreshAboutFromServer = refreshAboutFromServer;
+window.startAboutLiveSync = startAboutLiveSync;
