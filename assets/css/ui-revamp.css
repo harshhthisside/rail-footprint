@@ -1207,3 +1207,21 @@ body.dark .about-header-art .about-train-art.vb-about {
     background: rgba(239, 68, 68, 0.12);
     color: #ef4444;
 }
+
+
+/* Profile avatar — no DP / broken Google photo */
+.profile-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #2563eb;
+    flex-shrink: 0;
+}
+.profile-avatar.avatar-fallback {
+    object-fit: contain;
+    background: transparent;
+}
+.sidebar-user .profile-avatar {
+    background: rgba(255,255,255,.12);
+}

@@ -1,10 +1,16 @@
 // ==========================================
-// About page — public content + admin editor
-// Stats shown are the owner's (admin) snapshot, not the signed-in user.
+// About page — public content (Firestore) + local cache
+// Owner stats + visibility apply to ALL users once admin saves.
 // ==========================================
+
+import {
+    loadPublicAboutConfig,
+    savePublicAboutConfig
+} from "./firestore.js";
 
 const ABOUT_KEY = "rf_about_content_v1";
 const ABOUT_VIS_KEY = "rf_about_visible_v1";
+const ABOUT_CACHE_TS = "rf_about_cache_ts_v1";
 
 const DEFAULT_ABOUT = {
     name: "Harsh Raj",
@@ -21,69 +27,117 @@ const DEFAULT_ABOUT = {
         { label: "X / Twitter", subtitle: "Follow for updates", url: "https://x.com" },
         { label: "Instagram", subtitle: "See my journey stories", url: "https://instagram.com" }
     ],
-    // Owner footprint shown on About (independent of who is signed in)
     stats: {
         journeys: 0,
         stations: 0,
         distance: 0
-    }
+    },
+    visible: true
 };
 
-function loadAbout() {
+function normalizeAbout(p) {
+    const src = p && typeof p === "object" ? p : {};
+    const stats = src.stats && typeof src.stats === "object" ? src.stats : {};
+    return {
+        name: src.name || DEFAULT_ABOUT.name,
+        role: src.role || DEFAULT_ABOUT.role,
+        bio: src.bio || DEFAULT_ABOUT.bio,
+        avatar: src.avatar || DEFAULT_ABOUT.avatar,
+        tags: Array.isArray(src.tags) && src.tags.length ? src.tags : [...DEFAULT_ABOUT.tags],
+        quote: src.quote || DEFAULT_ABOUT.quote,
+        quoteAuthor: src.quoteAuthor || DEFAULT_ABOUT.quoteAuthor,
+        appName: src.appName || DEFAULT_ABOUT.appName,
+        appFocus: src.appFocus || DEFAULT_ABOUT.appFocus,
+        appPrivacy: src.appPrivacy || DEFAULT_ABOUT.appPrivacy,
+        social: Array.isArray(src.social) && src.social.length ? src.social : structuredClone(DEFAULT_ABOUT.social),
+        stats: {
+            journeys: Number(stats.journeys) || 0,
+            stations: Number(stats.stations) || 0,
+            distance: Number(stats.distance) || 0
+        },
+        visible: src.visible === false ? false : true
+    };
+}
+
+function loadAboutLocal() {
     try {
         const raw = localStorage.getItem(ABOUT_KEY);
-        if (!raw) return structuredClone(DEFAULT_ABOUT);
+        if (!raw) {
+            // legacy visibility-only key
+            const vis = localStorage.getItem(ABOUT_VIS_KEY);
+            const base = structuredClone(DEFAULT_ABOUT);
+            if (vis === "0" || vis === "false") base.visible = false;
+            return base;
+        }
         const p = JSON.parse(raw);
-        const stats = p.stats && typeof p.stats === "object" ? p.stats : {};
-        return {
-            name: p.name || DEFAULT_ABOUT.name,
-            role: p.role || DEFAULT_ABOUT.role,
-            bio: p.bio || DEFAULT_ABOUT.bio,
-            avatar: p.avatar || DEFAULT_ABOUT.avatar,
-            tags: Array.isArray(p.tags) && p.tags.length ? p.tags : [...DEFAULT_ABOUT.tags],
-            quote: p.quote || DEFAULT_ABOUT.quote,
-            quoteAuthor: p.quoteAuthor || DEFAULT_ABOUT.quoteAuthor,
-            appName: p.appName || DEFAULT_ABOUT.appName,
-            appFocus: p.appFocus || DEFAULT_ABOUT.appFocus,
-            appPrivacy: p.appPrivacy || DEFAULT_ABOUT.appPrivacy,
-            social: Array.isArray(p.social) && p.social.length ? p.social : structuredClone(DEFAULT_ABOUT.social),
-            stats: {
-                journeys: Number(stats.journeys) || 0,
-                stations: Number(stats.stations) || 0,
-                distance: Number(stats.distance) || 0
-            }
-        };
+        const data = normalizeAbout(p);
+        if (p.visible === undefined) {
+            const vis = localStorage.getItem(ABOUT_VIS_KEY);
+            if (vis === "0" || vis === "false") data.visible = false;
+        }
+        return data;
     } catch (_) {
         return structuredClone(DEFAULT_ABOUT);
     }
 }
 
+function saveAboutLocal(data) {
+    const n = normalizeAbout(data);
+    localStorage.setItem(ABOUT_KEY, JSON.stringify(n));
+    localStorage.setItem(ABOUT_VIS_KEY, n.visible ? "1" : "0");
+    localStorage.setItem(ABOUT_CACHE_TS, String(Date.now()));
+    return n;
+}
+
+/** Cached about (sync). Prefer after refreshAboutFromServer(). */
+export function loadAbout() {
+    return loadAboutLocal();
+}
+
 function saveAbout(data) {
-    localStorage.setItem(ABOUT_KEY, JSON.stringify(data));
+    return saveAboutLocal(data);
 }
 
 export function isAboutVisible() {
-    try {
-        const v = localStorage.getItem(ABOUT_VIS_KEY);
-        if (v === null || v === undefined) return true;
-        return v === "1" || v === "true";
-    } catch (_) {
-        return true;
-    }
+    return loadAboutLocal().visible !== false;
 }
 
 export function setAboutVisible(visible) {
-    localStorage.setItem(ABOUT_VIS_KEY, visible ? "1" : "0");
+    const data = loadAboutLocal();
+    data.visible = !!visible;
+    saveAboutLocal(data);
     applyAboutVisibility();
+    // Fire-and-forget public sync (admin only succeeds under rules)
+    publishAboutToServer(data).catch(() => {});
 }
 
-/** Show/hide About nav for everyone; admin can still open via Admin panel. */
+/** Pull public About from Firestore so every browser sees the same content. */
+export async function refreshAboutFromServer() {
+    try {
+        const remote = await loadPublicAboutConfig();
+        if (!remote) return loadAboutLocal();
+        const data = normalizeAbout(remote);
+        saveAboutLocal(data);
+        renderAboutPage();
+        applyAboutVisibility();
+        return data;
+    } catch (e) {
+        console.warn("refreshAboutFromServer", e);
+        return loadAboutLocal();
+    }
+}
+
+async function publishAboutToServer(data) {
+    const payload = normalizeAbout(data);
+    await savePublicAboutConfig(payload);
+    return payload;
+}
+
 export function applyAboutVisibility() {
     const visible = isAboutVisible();
     document.querySelectorAll('.nav-item[data-view="about"]').forEach((el) => {
         el.style.display = visible ? "" : "none";
     });
-    // If currently on About while hidden, leave for non-admins (admin can stay)
     const aboutView = document.getElementById("view-about");
     if (!visible && aboutView && aboutView.classList.contains("active")) {
         const adminNav = document.getElementById("adminNavItem");
@@ -92,7 +146,6 @@ export function applyAboutVisibility() {
             window.switchView("dashboard", { skipHistory: true });
         }
     }
-    // Reflect toggle button state in admin UI
     const btn = document.getElementById("adminToggleAboutVisibility");
     if (btn) {
         btn.textContent = visible ? "Hide About section" : "Show About section";
@@ -102,8 +155,8 @@ export function applyAboutVisibility() {
     const lbl = document.getElementById("adminAboutVisibilityStatus");
     if (lbl) {
         lbl.textContent = visible
-            ? "About is visible in the sidebar for all users."
-            : "About is hidden from the sidebar. Open it from Admin → Quick navigation while editing.";
+            ? "About is visible in the sidebar for all users (public)."
+            : "About is hidden from all users. Admin can still open it via Quick navigation.";
     }
 }
 
@@ -163,7 +216,7 @@ function applyOwnerStatsToDom(stats) {
 }
 
 export function renderAboutPage() {
-    const data = loadAbout();
+    const data = loadAboutLocal();
     const setText = (id, val) => {
         const el = document.getElementById(id);
         if (el) el.textContent = val || "";
@@ -214,12 +267,10 @@ export function renderAboutPage() {
         }
     }
 
-    // Always show owner/admin snapshot — never the signed-in user's live stats
     applyOwnerStatsToDom(data.stats);
     applyAboutVisibility();
 }
 
-/** Capture current dashboard numbers into About owner stats (call while signed in as admin). */
 export function syncAdminStatsToAbout() {
     const parseNum = (id) => {
         const el = document.getElementById(id);
@@ -227,22 +278,22 @@ export function syncAdminStatsToAbout() {
         const n = parseInt(String(el.textContent || "").replace(/[^\d]/g, ""), 10);
         return Number.isFinite(n) ? n : 0;
     };
-    const data = loadAbout();
+    const data = loadAboutLocal();
     data.stats = {
         journeys: parseNum("statJourneys"),
         stations: parseNum("statStations"),
         distance: parseNum("statDistance")
     };
-    saveAbout(data);
+    saveAboutLocal(data);
     applyOwnerStatsToDom(data.stats);
     return data.stats;
 }
 
 export function fillAdminAboutForm() {
-    const data = loadAbout();
+    const data = loadAboutLocal();
     const set = (id, val) => {
         const el = document.getElementById(id);
-        if (el) el.value = val || "";
+        if (el) el.value = val ?? "";
     };
     set("adminAboutName", data.name);
     set("adminAboutRole", data.role);
@@ -266,81 +317,128 @@ export function fillAdminAboutForm() {
     applyAboutVisibility();
 }
 
+function readFormAbout() {
+    const val = (id) => document.getElementById(id)?.value?.trim() || "";
+    const num = (id) => {
+        const n = parseInt(val(id).replace(/[^\d]/g, ""), 10);
+        return Number.isFinite(n) ? n : 0;
+    };
+    const tags = val("adminAboutTags")
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+    const social = parseSocialText(val("adminAboutSocial"));
+    const prev = loadAboutLocal();
+    return normalizeAbout({
+        name: val("adminAboutName") || DEFAULT_ABOUT.name,
+        role: val("adminAboutRole") || DEFAULT_ABOUT.role,
+        bio: val("adminAboutBio") || DEFAULT_ABOUT.bio,
+        avatar: val("adminAboutAvatar") || DEFAULT_ABOUT.avatar,
+        tags: tags.length ? tags : [...DEFAULT_ABOUT.tags],
+        quote: val("adminAboutQuote") || DEFAULT_ABOUT.quote,
+        quoteAuthor: val("adminAboutQuoteAuthor") || DEFAULT_ABOUT.quoteAuthor,
+        appName: val("adminAboutAppName") || DEFAULT_ABOUT.appName,
+        appFocus: val("adminAboutAppFocus") || DEFAULT_ABOUT.appFocus,
+        appPrivacy: val("adminAboutAppPrivacy") || DEFAULT_ABOUT.appPrivacy,
+        social: social.length ? social : structuredClone(DEFAULT_ABOUT.social),
+        stats: {
+            journeys: num("adminAboutStatJourneys") || prev.stats?.journeys || 0,
+            stations: num("adminAboutStatStations") || prev.stats?.stations || 0,
+            distance: num("adminAboutStatDistance") || prev.stats?.distance || 0
+        },
+        visible: prev.visible
+    });
+}
+
 export function initializeAboutAdmin() {
-    document.getElementById("adminSaveAbout")?.addEventListener("click", () => {
-        const val = (id) => document.getElementById(id)?.value?.trim() || "";
-        const num = (id) => {
-            const n = parseInt(val(id).replace(/[^\d]/g, ""), 10);
-            return Number.isFinite(n) ? n : 0;
-        };
-        const tags = val("adminAboutTags")
-            .split(",")
-            .map((t) => t.trim())
-            .filter(Boolean);
-        const social = parseSocialText(val("adminAboutSocial"));
-        const prev = loadAbout();
-        const data = {
-            name: val("adminAboutName") || DEFAULT_ABOUT.name,
-            role: val("adminAboutRole") || DEFAULT_ABOUT.role,
-            bio: val("adminAboutBio") || DEFAULT_ABOUT.bio,
-            avatar: val("adminAboutAvatar") || DEFAULT_ABOUT.avatar,
-            tags: tags.length ? tags : [...DEFAULT_ABOUT.tags],
-            quote: val("adminAboutQuote") || DEFAULT_ABOUT.quote,
-            quoteAuthor: val("adminAboutQuoteAuthor") || DEFAULT_ABOUT.quoteAuthor,
-            appName: val("adminAboutAppName") || DEFAULT_ABOUT.appName,
-            appFocus: val("adminAboutAppFocus") || DEFAULT_ABOUT.appFocus,
-            appPrivacy: val("adminAboutAppPrivacy") || DEFAULT_ABOUT.appPrivacy,
-            social: social.length ? social : structuredClone(DEFAULT_ABOUT.social),
-            stats: {
-                journeys: num("adminAboutStatJourneys") || prev.stats?.journeys || 0,
-                stations: num("adminAboutStatStations") || prev.stats?.stations || 0,
-                distance: num("adminAboutStatDistance") || prev.stats?.distance || 0
+    document.getElementById("adminSaveAbout")?.addEventListener("click", async () => {
+        const data = readFormAbout();
+        saveAboutLocal(data);
+        renderAboutPage();
+        const st = document.getElementById("adminAboutStatus");
+        if (st) st.textContent = "Saving to public config…";
+        try {
+            await publishAboutToServer(data);
+            if (st) st.textContent = "About saved publicly. All users will see these changes after refresh.";
+        } catch (e) {
+            console.error(e);
+            if (st) {
+                st.textContent =
+                    "Saved on this device only. Public sync failed — add Firestore rules for appConfig/about (read: true, write: admin). " +
+                    (e?.message || "");
             }
-        };
-        saveAbout(data);
-        renderAboutPage();
-        const st = document.getElementById("adminAboutStatus");
-        if (st) st.textContent = "About page saved. Visitors see the update immediately.";
-    });
-
-    document.getElementById("adminResetAbout")?.addEventListener("click", () => {
-        if (!confirm("Reset About page to defaults?")) return;
-        saveAbout(DEFAULT_ABOUT);
-        fillAdminAboutForm();
-        renderAboutPage();
-        const st = document.getElementById("adminAboutStatus");
-        if (st) st.textContent = "Reset to defaults.";
-    });
-
-    document.getElementById("adminSyncAboutStats")?.addEventListener("click", () => {
-        const stats = syncAdminStatsToAbout();
-        fillAdminAboutForm();
-        const st = document.getElementById("adminAboutStatus");
-        if (st) {
-            st.textContent = `Owner stats synced: ${stats.journeys} journeys · ${stats.stations} stations · ${stats.distance.toLocaleString()} km`;
         }
     });
 
-    document.getElementById("adminToggleAboutVisibility")?.addEventListener("click", () => {
-        const next = !isAboutVisible();
-        setAboutVisible(next);
+    document.getElementById("adminResetAbout")?.addEventListener("click", async () => {
+        if (!confirm("Reset About page to defaults and publish?")) return;
+        const data = structuredClone(DEFAULT_ABOUT);
+        saveAboutLocal(data);
+        fillAdminAboutForm();
+        renderAboutPage();
         const st = document.getElementById("adminAboutStatus");
-        if (st) {
-            st.textContent = next
-                ? "About section is now visible in the sidebar."
-                : "About section is hidden from users. You can still open it from Admin → Quick navigation.";
+        try {
+            await publishAboutToServer(data);
+            if (st) st.textContent = "Reset to defaults and published.";
+        } catch (e) {
+            if (st) st.textContent = "Reset locally. Public publish failed: " + (e?.message || e);
+        }
+    });
+
+    document.getElementById("adminSyncAboutStats")?.addEventListener("click", async () => {
+        const stats = syncAdminStatsToAbout();
+        fillAdminAboutForm();
+        const data = loadAboutLocal();
+        const st = document.getElementById("adminAboutStatus");
+        try {
+            await publishAboutToServer(data);
+            if (st) {
+                st.textContent = `Owner stats published: ${stats.journeys} journeys · ${stats.stations} stations · ${stats.distance.toLocaleString()} km`;
+            }
+        } catch (e) {
+            if (st) {
+                st.textContent = `Stats saved locally (${stats.journeys}/${stats.stations}). Public sync failed — check Firestore rules.`;
+            }
+        }
+    });
+
+    document.getElementById("adminToggleAboutVisibility")?.addEventListener("click", async () => {
+        const next = !isAboutVisible();
+        const data = loadAboutLocal();
+        data.visible = next;
+        saveAboutLocal(data);
+        applyAboutVisibility();
+        const st = document.getElementById("adminAboutStatus");
+        if (st) st.textContent = next ? "Publishing: show About…" : "Publishing: hide About…";
+        try {
+            await publishAboutToServer(data);
+            if (st) {
+                st.textContent = next
+                    ? "About is now visible for all users."
+                    : "About is now hidden for all users.";
+            }
+        } catch (e) {
+            if (st) {
+                st.textContent =
+                    "Visibility changed on this device only. Public sync failed — update Firestore rules for appConfig/about. " +
+                    (e?.message || "");
+            }
         }
     });
 
     fillAdminAboutForm();
     renderAboutPage();
+    // Load public config in background
+    refreshAboutFromServer()
+        .then(() => fillAdminAboutForm())
+        .catch(() => {});
 }
 
 export function getAboutData() {
-    return loadAbout();
+    return loadAboutLocal();
 }
 
-// Expose for inline switchView / other modules
 window.renderAboutPage = renderAboutPage;
 window.applyAboutVisibility = applyAboutVisibility;
 window.isAboutVisible = isAboutVisible;
+window.refreshAboutFromServer = refreshAboutFromServer;

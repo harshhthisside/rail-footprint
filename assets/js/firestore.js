@@ -333,33 +333,19 @@ export async function deleteAllJourneys() {
 
 export async function loadUsers() {
 
+    if (!auth.currentUser) return [];
 
-    const usersRef =
-        collection(
-            db,
-            "users"
-        );
-
-
-
-    const snap =
-        await getDocs(
-            usersRef
-        );
-
-
-
-    return snap.docs.map(doc => ({
-
-
-        id:
-            doc.id,
-
-
-        ...doc.data()
-
-
-    }));
+    try {
+        const usersRef = collection(db, "users");
+        const snap = await getDocs(usersRef);
+        return snap.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+    } catch (e) {
+        console.warn("loadUsers", e?.code || e?.message || e);
+        return [];
+    }
 
 }
 
@@ -515,4 +501,41 @@ export async function updateDisplayName(name) {
         { merge: true }
     );
     return cleaned;
+}
+
+
+// ==========================================
+// Public About config (visible to all users)
+// Document: appConfig/about
+// Requires Firestore rules:
+//   match /appConfig/{docId} {
+//     allow read: if true;
+//     allow write: if request.auth != null
+//       && request.auth.token.email == 'harshcaptain2310@gmail.com';
+//   }
+// ==========================================
+
+const publicAboutRef = () => doc(db, "appConfig", "about");
+
+export async function loadPublicAboutConfig() {
+    try {
+        const snap = await getDoc(publicAboutRef());
+        if (!snap.exists()) return null;
+        return snap.data() || null;
+    } catch (e) {
+        console.warn("loadPublicAboutConfig", e);
+        return null;
+    }
+}
+
+export async function savePublicAboutConfig(payload) {
+    if (!auth.currentUser)
+        throw new Error("Please sign in first.");
+    const data = {
+        ...(payload || {}),
+        updatedAt: Date.now(),
+        updatedBy: auth.currentUser.uid
+    };
+    await setDoc(publicAboutRef(), data, { merge: true });
+    return data;
 }

@@ -82,12 +82,59 @@ import {
 import {
     initializeAboutAdmin,
     renderAboutPage,
-    applyAboutVisibility
+    applyAboutVisibility,
+    refreshAboutFromServer
 } from "./about.js";
 
 
 
 
+
+
+
+// ==========================================
+// Profile avatar (works with no Google DP)
+// ==========================================
+
+function initialsFromName(name) {
+    const parts = String(name || "User").trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return "U";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/** Local SVG avatar — no external request, immune to tracking blocks */
+export function avatarDataUrl(name, opts = {}) {
+    const bg = opts.bg || "#2563eb";
+    const fg = opts.fg || "#ffffff";
+    const size = opts.size || 96;
+    const text = initialsFromName(name);
+    const fontSize = Math.round(size * 0.38);
+    const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">` +
+        `<rect width="${size}" height="${size}" rx="${size / 2}" fill="${bg}"/>` +
+        `<text x="50%" y="50%" dy=".08em" fill="${fg}" font-family="Inter,system-ui,sans-serif" font-size="${fontSize}" font-weight="700" text-anchor="middle" dominant-baseline="middle">${text}</text>` +
+        `</svg>`;
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+export function setProfileAvatar(imgEl, { photoURL, name } = {}) {
+    if (!imgEl) return;
+    const fallback = avatarDataUrl(name || "User");
+    const applyFallback = () => {
+        imgEl.onerror = null;
+        imgEl.src = fallback;
+        imgEl.classList.add("avatar-fallback");
+    };
+    imgEl.classList.remove("avatar-fallback");
+    const url = (photoURL || "").trim();
+    if (!url) {
+        applyFallback();
+        return;
+    }
+    imgEl.onerror = applyFallback;
+    imgEl.src = url;
+}
 
 
 async function initializeApp(){
@@ -437,8 +484,13 @@ if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
         initializeAboutAdmin();
         renderAboutPage();
         applyAboutVisibility();
+        // Public About (content + visibility) for every visitor
+        refreshAboutFromServer().catch(() => {});
         window.renderAboutPage = renderAboutPage;
         window.applyAboutVisibility = applyAboutVisibility;
+        window.refreshAboutFromServer = refreshAboutFromServer;
+        window.setProfileAvatar = setProfileAvatar;
+        window.avatarDataUrl = avatarDataUrl;
         window.updateAdminVisibility = updateAdminVisibility;
         window.renderZonesPage = renderZonesPage;
 
@@ -655,9 +707,10 @@ if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
 
 
 
-                    profileImage.src =
-                    user.photoURL ||
-                    `https://ui-avatars.com/api/?name=${encodeURIComponent(shownName || "User")}&background=0f766e&color=fff`;
+                    setProfileAvatar(profileImage, {
+                        photoURL: user.photoURL,
+                        name: shownName || user.displayName || "User"
+                    });
 
 
 
@@ -757,8 +810,7 @@ if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
 
 
 
-                    profileImage.src =
-                    "https://ui-avatars.com/api/?name=Guest&background=0f766e&color=fff";
+                    setProfileAvatar(profileImage, { photoURL: "", name: "Guest" });
 
 
 

@@ -24,7 +24,7 @@ import { renderZonesPage } from "./zones.js";
 import { renderStationsPage } from "./stationsPage.js";
 
 const ADMIN_EMAILS = ["harshcaptain2310@gmail.com"];
-const ADMIN_UIDS = ["aa1XXicVpPeZzmFWp6DKix7D2012"];
+const ADMIN_UIDS = ["aa1XXicVpPeZzmFWp6DKix7D2012", "aa1XXicVpPeZzmFWp6DKix7D20l2"];
 
 let manualZoneDraft = new Set();
 

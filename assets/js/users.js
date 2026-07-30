@@ -63,8 +63,16 @@ export async function initializeUsers() {
 
 async function renderUsers() {
 
-    const users =
-        await loadUsers();
+    let users = [];
+    try {
+        users = await loadUsers();
+    } catch (e) {
+        console.warn("renderUsers", e?.code || e?.message || e);
+        if (userList) {
+            userList.innerHTML = `<p>Sign in to explore other footprints.</p>`;
+        }
+        return;
+    }
 
     if (!users.length) {
 
@@ -104,12 +112,14 @@ async function renderUsers() {
 
             <img
                 class="user-avatar"
+                alt=""
                 src="${
                     user.photo ||
-                    `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                        user.name || "User"
-                    )}&background=2563eb&color=fff`
-                }">
+                    (typeof window.avatarDataUrl === "function"
+                        ? window.avatarDataUrl(user.name || "User")
+                        : "")
+                }"
+                onerror="this.onerror=null;this.src=(typeof window.avatarDataUrl==='function'?window.avatarDataUrl('${(user.name||"User").replace(/'/g, "")}'):'');">
 
             <div>
 

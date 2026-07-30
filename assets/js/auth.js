@@ -38,64 +38,26 @@ let currentUser = null;
 
 async function createUserProfile(user) {
 
+    try {
+        const userRef = doc(db, "users", user.uid);
+        const snapshot = await getDoc(userRef);
 
-    const userRef =
-        doc(
-            db,
-            "users",
-            user.uid
-        );
-
-
-    const snapshot =
-        await getDoc(userRef);
-
-
-
-    if (!snapshot.exists()) {
-
-
-        await setDoc(
-            userRef,
-            {
-
-                name:
-                    user.displayName ||
-                    "Rail Enthusiast",
-
-
-                email:
-                    user.email || "",
-
-
-                photo:
-                    user.photoURL || "",
-
-
-                createdAt:
-                    Date.now()
-
-            }
-        );
-
-
-        console.log(
-            "User profile created"
-        );
-
-    }
-    else {
-
-
-        console.log(
-            "User profile already exists"
-        );
-
-
+        if (!snapshot.exists()) {
+            await setDoc(userRef, {
+                name: user.displayName || "Rail Enthusiast",
+                email: user.email || "",
+                photo: user.photoURL || "",
+                createdAt: Date.now()
+            });
+            console.log("User profile created");
+        } else {
+            console.log("User profile already exists");
+        }
+    } catch (e) {
+        console.warn("createUserProfile", e?.code || e?.message || e);
     }
 
 }
-
 
 // ==========================================
 // Login
@@ -359,15 +321,13 @@ export function initializeAuth(callback = null) {
             }
 
             if (callback) {
-
-
-                await callback(
-                    user
-                );
-
-
+                try {
+                    await callback(user);
+                } catch (err) {
+                    // Sign-out races / permission errors must not surface as uncaught
+                    console.warn("Auth state callback:", err?.code || err?.message || err);
+                }
             }
-
 
         }
 
