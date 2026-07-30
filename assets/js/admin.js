@@ -475,5 +475,68 @@ export function initializeAdminPanel() {
         document.getElementById("views")?.scrollTo({ top: 0, behavior: "smooth" });
     });
 
+    document.getElementById("adminVerifyStations")?.addEventListener("click", async () => {
+        try {
+            const res = await fetch("assets/data/station_index.json");
+            const stations = await res.json();
+            const critical = ["BSB", "NDLS", "ADI", "MAS", "MAO", "MYS", "MDU", "PAU", "CSMT", "HWH", "SBC"];
+            const lines = [];
+            let missingNode = 0;
+            for (const s of stations) {
+                if (!s.graph_node && s.graph_node !== 0) missingNode++;
+            }
+            for (const code of critical) {
+                const hits = stations.filter((s) => (s.code || "").toUpperCase() === code);
+                if (!hits.length) {
+                    lines.push(`${code}: NOT FOUND`);
+                    continue;
+                }
+                const s = hits[0];
+                lines.push(
+                    `${code}: ${s.name} @ ${Number(s.lat).toFixed(5)},${Number(s.lon).toFixed(5)} node=${s.graph_node ?? "—"} (${hits.length} entry)`
+                );
+            }
+            lines.push(`---`);
+            lines.push(`Total stations: ${stations.length}`);
+            lines.push(`Without graph_node: ${missingNode}`);
+            console.log("[admin] station verification", lines.join("\n"));
+            alert(lines.join("\n"));
+        } catch (e) {
+            alert(e.message || "Verify failed");
+        }
+    });
+
+    document.getElementById("adminDumpRouteSample")?.addEventListener("click", async () => {
+        try {
+            const { calculateRoute, graphNodes } = await import("./routing.js");
+            const res = await fetch("assets/data/station_index.json");
+            const stations = await res.json();
+            const byCode = (c) => stations.find((s) => (s.code || "").toUpperCase() === c);
+            const bsb = byCode("BSB");
+            const ndls = byCode("NDLS");
+            if (!bsb || !ndls) {
+                alert("BSB or NDLS missing from station index.");
+                return;
+            }
+            const t0 = performance.now();
+            const coords = calculateRoute([bsb, ndls]);
+            const ms = Math.round(performance.now() - t0);
+            const msg = [
+                `BSB: ${bsb.lat}, ${bsb.lon} node=${bsb.graph_node}`,
+                `NDLS: ${ndls.lat}, ${ndls.lon} node=${ndls.graph_node}`,
+                `Route points: ${coords?.length || 0}`,
+                `Calc time: ${ms} ms`,
+                `Graph nodes loaded: ${graphNodes?.length || 0}`,
+                coords?.length
+                    ? `First: ${coords[0]} Last: ${coords[coords.length - 1]}`
+                    : "No route (check graph connectivity)"
+            ].join("\n");
+            console.log("[admin] sample route BSB↔NDLS", coords?.slice(0, 5), "...");
+            alert(msg);
+        } catch (e) {
+            alert(e.message || "Route sample failed");
+        }
+    });
+
     updateAdminVisibility(auth.currentUser);
 }

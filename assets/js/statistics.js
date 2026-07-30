@@ -469,6 +469,32 @@ export async function loadStatistics() {
     set("statNetwork", stats.networkPercent);
     set("statTravelTime", stats.travelTime);
 
+    // Quick Overview progress bars
+    const setProg = (id, pct) => {
+        const el = document.getElementById(id);
+        if (el) el.style.width = `${Math.max(0, Math.min(100, Number(pct) || 0))}%`;
+    };
+    const statesPct = Math.round((Number(stats.states) / 28) * 100);
+    const zonesPct = Math.round((Number(stats.zones) / 18) * 100);
+    const netPct = Math.round(Number(stats.networkPercent) || 0);
+    setProg("progStates", statesPct);
+    setProg("progZones", zonesPct);
+    setProg("progNetwork", netPct);
+    const hoursMatch = String(stats.travelTime || "").match(/([\d.]+)/);
+    const hours = hoursMatch ? parseFloat(hoursMatch[1]) : 0;
+    setProg("progTravel", Math.min(100, (hours / 1000) * 100));
+    const setPct = (id, n) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = `${n}%`;
+    };
+    setPct("pctStates", statesPct);
+    setPct("pctZones", zonesPct);
+    setPct("pctNetwork", netPct);
+    // Keep About mini-stats in sync
+    set("aboutStatJourneys", stats.journeys.toLocaleString());
+    set("aboutStatStations", stats.stations.toLocaleString());
+    set("aboutStatDistance", `${stats.distance.toLocaleString()} km`);
+
     // Analytics view
     set("analyticsJourneys", stats.journeys.toLocaleString());
     set("analyticsStations", stats.stations.toLocaleString());

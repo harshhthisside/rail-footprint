@@ -741,3 +741,67 @@ body.compact-cards .timeline-item {
         gap: 10px;
     }
 }
+
+/* ---------- Preference-driven performance & accessibility ---------- */
+body.reduce-motion *,
+body.reduce-motion *::before,
+body.reduce-motion *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+}
+
+body.hide-km-labels .journey-distance,
+body.hide-km-labels .distance-badge,
+body.hide-km-labels .km-label {
+    display: none !important;
+}
+
+body.high-contrast-markers .station-dot,
+body.high-contrast-markers .endpoint-marker {
+    filter: contrast(1.35) saturate(1.2);
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px #0f172a !important;
+}
+
+body.low-power-map .leaflet-tile-pane {
+    opacity: 0.92;
+}
+body.low-power-map .leaflet-shadow-pane,
+body.low-power-map .leaflet-marker-shadow {
+    display: none !important;
+}
+
+/* Prevent overscroll jank on touch devices */
+html {
+    overscroll-behavior-y: none;
+}
+.view {
+    -webkit-overflow-scrolling: touch;
+    contain: layout style;
+}
+
+/* GPU-friendly map containers */
+#map,
+#plannerMap,
+.map-container {
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
+}
+
+/* Settings pref rows */
+.settings-pref-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    font-size: 14px;
+    cursor: pointer;
+    user-select: none;
+}
+.settings-pref-row input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary, #3b82f6);
+}

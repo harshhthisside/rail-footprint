@@ -79,6 +79,11 @@ import {
     updateDisplayName
 } from "./firestore.js";
 
+import {
+    initializeAboutAdmin,
+    renderAboutPage
+} from "./about.js";
+
 
 
 
@@ -320,6 +325,10 @@ if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
             compactCards: "pref_compactCards",
             hideFloating: "pref_hideFloatingStats",
             confirmDelete: "pref_confirmDelete",
+            highContrast: "pref_highContrast",
+            autoFitRoute: "pref_autoFitRoute",
+            showKmLabels: "pref_showKmLabels",
+            lowPowerMap: "pref_lowPowerMap",
             defaultView: "pref_defaultView"
         };
 
@@ -345,16 +354,22 @@ if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
             const reduce = !!readPref(PREF_KEYS.reduceMotion, false);
             const compact = !!readPref(PREF_KEYS.compactCards, false);
             const hideFloat = !!readPref(PREF_KEYS.hideFloating, false);
+            const highContrast = !!readPref(PREF_KEYS.highContrast, false);
+            const showKm = readPref(PREF_KEYS.showKmLabels, true) !== false && readPref(PREF_KEYS.showKmLabels, "true") !== "false";
+            const lowPower = !!readPref(PREF_KEYS.lowPowerMap, false);
             document.body.classList.toggle("reduce-motion", reduce);
             document.body.classList.toggle("compact-cards", compact);
+            document.body.classList.toggle("high-contrast-markers", highContrast);
+            document.body.classList.toggle("hide-km-labels", !showKm);
+            document.body.classList.toggle("low-power-map", lowPower);
             const fs = document.getElementById("floatingStats");
             if (fs) fs.style.display = hideFloat ? "none" : "";
-            window.__prefConfirmDelete = readPref(PREF_KEYS.confirmDelete, true) !== false && readPref(PREF_KEYS.confirmDelete, "true") !== "false";
-            if (typeof readPref(PREF_KEYS.confirmDelete, true) === "boolean") {
-                window.__prefConfirmDelete = readPref(PREF_KEYS.confirmDelete, true);
-            } else {
-                window.__prefConfirmDelete = readPref(PREF_KEYS.confirmDelete, "true") !== "false";
-            }
+            window.__prefConfirmDelete = true;
+            const cd = readPref(PREF_KEYS.confirmDelete, true);
+            if (typeof cd === "boolean") window.__prefConfirmDelete = cd;
+            else window.__prefConfirmDelete = cd !== "false";
+            window.__prefAutoFitRoute = readPref(PREF_KEYS.autoFitRoute, true) !== false && readPref(PREF_KEYS.autoFitRoute, "true") !== "false";
+            window.__prefLowPowerMap = lowPower;
         }
 
         function bindPreferenceControls() {
@@ -362,7 +377,11 @@ if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
                 ["prefReduceMotion", PREF_KEYS.reduceMotion, false],
                 ["prefCompactCards", PREF_KEYS.compactCards, false],
                 ["prefHideFloatingStats", PREF_KEYS.hideFloating, false],
-                ["prefConfirmDelete", PREF_KEYS.confirmDelete, true]
+                ["prefConfirmDelete", PREF_KEYS.confirmDelete, true],
+                ["prefHighContrast", PREF_KEYS.highContrast, false],
+                ["prefAutoFitRoute", PREF_KEYS.autoFitRoute, true],
+                ["prefShowKmLabels", PREF_KEYS.showKmLabels, true],
+                ["prefLowPowerMap", PREF_KEYS.lowPowerMap, false]
             ];
             map.forEach(([id, key, def]) => {
                 const el = document.getElementById(id);
@@ -397,6 +416,12 @@ if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
 
         initializeMap();
 
+        // Start heavy graph download ASAP (parallel with rest of UI boot)
+        const graphReady = loadGraph().catch((err) => {
+            console.error("Graph load failed", err);
+            throw err;
+        });
+
         initializeMapExport();
 
         initializeZonesPage();
@@ -408,6 +433,9 @@ if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
             if (typeof window.switchView === "function") window.switchView("add-journey");
         });
         initializeAdminPanel();
+        initializeAboutAdmin();
+        renderAboutPage();
+        window.renderAboutPage = renderAboutPage;
         window.updateAdminVisibility = updateAdminVisibility;
         window.renderZonesPage = renderZonesPage;
 
@@ -422,7 +450,7 @@ if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
         // ==========================================
 
 
-        await loadGraph();
+        await graphReady;
 
 
 

@@ -36,9 +36,19 @@
 
         <!-- Brand -->
         <div class="sidebar-brand">
-            <div class="brand-icon">🚆</div>
+            <div class="brand-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="4" y="3" width="16" height="14" rx="3" fill="white" fill-opacity="0.95"/>
+                    <circle cx="8.5" cy="17.5" r="2" fill="white"/>
+                    <circle cx="15.5" cy="17.5" r="2" fill="white"/>
+                    <rect x="7" y="6" width="4" height="3" rx="0.8" fill="#3b82f6"/>
+                    <rect x="13" y="6" width="4" height="3" rx="0.8" fill="#3b82f6"/>
+                    <rect x="7" y="11" width="10" height="2" rx="1" fill="#93c5fd"/>
+                </svg>
+            </div>
             <div class="brand-text">
                 <h1>Rail Footprint</h1>
+                <p class="brand-tagline">Track. Explore. Remember.</p>
             </div>
         </div>
 
@@ -72,6 +82,10 @@
                 <span class="nav-icon">🌍</span>
                 <span>Explore</span>
             </a>
+            <a href="#" class="nav-item" data-view="about">
+                <span class="nav-icon">ℹ️</span>
+                <span>About</span>
+            </a>
             <a href="#" class="nav-item" data-view="settings">
                 <span class="nav-icon">⚙️</span>
                 <span>Settings</span>
@@ -97,6 +111,7 @@
                         Not signed in
                     </div>
                 </div>
+                <span class="profile-chevron" aria-hidden="true">▾</span>
             </div>
 
             <div class="auth-card">
@@ -121,15 +136,17 @@
 
             <div class="header-right">
                 <div class="header-search">
+                    <span class="search-icon" aria-hidden="true">🔍</span>
                     <input id="mapSearchInput"
                            type="text"
                            placeholder="Search station or journey...">
+                    <kbd class="search-kbd">⌘K</kbd>
                     <div id="mapSearchSuggestions" class="suggestions"></div>
                 </div>
-                <button id="themeBtn" class="header-btn" title="Toggle theme">🌙</button>
-                <button id="notificationBtn" class="header-btn" title="Notifications">
+                <button id="themeBtn" class="header-btn" title="Toggle theme" type="button">☀️</button>
+                <button id="notificationBtn" class="header-btn" title="Notifications" type="button">
                     🔔
-                    <span class="notif-dot"></span>
+                    <span class="notif-badge" id="notifBadge">3</span>
                 </button>
             </div>
         </header>
@@ -156,42 +173,65 @@
 
                         <div class="stat-card large">
                             <div class="stat-top">
-                                <div>
+                                <div class="stat-icon-pill blue" aria-hidden="true">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" fill="#3b82f6"/><rect x="14" y="3" width="7" height="7" rx="1.5" fill="#93c5fd"/><rect x="3" y="14" width="7" height="7" rx="1.5" fill="#93c5fd"/><rect x="14" y="14" width="7" height="7" rx="1.5" fill="#3b82f6"/></svg>
+                                </div>
+                                <div class="stat-body">
                                     <div id="statJourneys" class="stat-value">0</div>
                                     <div class="stat-label">Total Journeys</div>
                                 </div>
-                                <div class="stat-icon-box blue">📈</div>
+                                <svg class="stat-spark" viewBox="0 0 64 28" preserveAspectRatio="none" aria-hidden="true">
+                                    <polyline fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                                        points="0,22 8,18 16,20 24,12 32,14 40,8 48,10 56,4 64,6"/>
+                                </svg>
                             </div>
                         </div>
 
                         <div class="stat-card large">
                             <div class="stat-top">
-                                <div>
+                                <div class="stat-icon-pill rose" aria-hidden="true">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7z" fill="#f43f5e"/><circle cx="12" cy="9" r="2.5" fill="#fff"/></svg>
+                                </div>
+                                <div class="stat-body">
                                     <div id="statStations" class="stat-value">0</div>
                                     <div class="stat-label">Stations Visited</div>
                                 </div>
-                                <div class="stat-icon-box rose">📍</div>
+                                <svg class="stat-spark" viewBox="0 0 64 28" preserveAspectRatio="none" aria-hidden="true">
+                                    <polyline fill="none" stroke="#f43f5e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                                        points="0,20 8,16 16,18 24,10 32,14 40,6 48,12 56,8 64,4"/>
+                                </svg>
                             </div>
                         </div>
 
                         <div class="stat-card large">
                             <div class="stat-top">
-                                <div>
+                                <div class="stat-icon-pill emerald" aria-hidden="true">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 7l9-4 9 4v10l-9 4-9-4V7z" stroke="#10b981" stroke-width="1.8" fill="#d1fae5"/><path d="M12 3v18M3 7l9 4 9-4" stroke="#10b981" stroke-width="1.5"/></svg>
+                                </div>
+                                <div class="stat-body">
                                     <div id="statDistance" class="stat-value">0 km</div>
                                     <div class="stat-label">Distance Covered</div>
                                 </div>
-                                <div class="stat-icon-box emerald">🚆</div>
+                                <svg class="stat-spark" viewBox="0 0 64 28" preserveAspectRatio="none" aria-hidden="true">
+                                    <polyline fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                                        points="0,24 8,20 16,18 24,14 32,16 40,10 48,8 56,6 64,2"/>
+                                </svg>
                             </div>
                         </div>
 
-                        <div class="stat-card large">
-                            <div class="stat-top">
+                        <div class="stat-card large longest-card">
+                            <div class="longest-badge"><span class="crown">👑</span> Longest Journey</div>
+                            <div class="longest-row">
                                 <div>
-                                    <div id="statLongest" class="stat-value">—</div>
-                                    <div class="stat-label">Longest Journey</div>
+                                    <div id="statLongest" class="stat-value longest-route">—</div>
                                     <div id="statLongestMeta" class="stat-meta"></div>
                                 </div>
-                                <div class="stat-icon-box amber">🏆</div>
+                                <div class="longest-train" aria-hidden="true">
+                                    <picture>
+                                        <source srcset="assets/img/vande-longest-train.webp" type="image/webp">
+                                        <img class="train-illus vb-train" src="assets/img/vande-longest-train.png" alt="" width="620" height="372" loading="lazy" decoding="async">
+                                    </picture>
+                                </div>
                             </div>
                         </div>
 
@@ -217,8 +257,8 @@
                             </div>
 
                             <div id="floatingStats">
-                                <div>🚆 <span id="floatingJourneyCount">0</span></div>
-                                <div>📍 <span id="floatingStationCount">0</span></div>
+                                <div class="float-chip"><span class="float-ico">🚆</span> <span id="floatingJourneyCount">0</span> <span class="float-lbl">Journeys</span></div>
+                                <div class="float-chip"><span class="float-ico">📍</span> <span id="floatingStationCount">0</span> <span class="float-lbl">Stations</span></div>
                             </div>
 
                             <div id="map"></div>
@@ -236,34 +276,57 @@
 
                     <div class="overview-grid">
                         <div class="overview-card">
-                            <div class="overview-icon blue">🇮🇳</div>
-                            <div>
+                            <div class="overview-icon blue">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 3c-1.5 1.2-3.2 2.8-4.2 4.8C6.5 10.2 6 12.5 6.5 14.5c.4 1.6 1.4 3 2.8 3.8.6.4 1.2.2 1.5-.3.4-.7.8-1.5 1.5-1.5s1.1.8 1.5 1.5c.3.5.9.7 1.5.3 1.4-.8 2.4-2.2 2.8-3.8.5-2 0-4.3-1.3-6.7C15.2 5.8 13.5 4.2 12 3z" fill="#c7d2fe"/><path d="M12 3c-1.5 1.2-3.2 2.8-4.2 4.8C6.5 10.2 6 12.5 6.5 14.5c.4 1.6 1.4 3 2.8 3.8.6.4 1.2.2 1.5-.3.4-.7.8-1.5 1.5-1.5s1.1.8 1.5 1.5c.3.5.9.7 1.5.3 1.4-.8 2.4-2.2 2.8-3.8.5-2 0-4.3-1.3-6.7C15.2 5.8 13.5 4.2 12 3z" stroke="#6366f1" stroke-width="1.3" fill="none"/><circle cx="12" cy="11" r="1.6" fill="#6366f1"/></svg>
+                            </div>
+                            <div class="overview-text">
                                 <div class="overview-value"><span id="statStates">0</span> <span class="muted">/ 28</span></div>
                                 <div class="overview-label">States Covered</div>
                             </div>
+                            <div class="overview-progress-wrap">
+                                <div class="overview-progress"><span id="progStates" style="width:0%"></span></div>
+                                <span class="overview-pct" id="pctStates">0%</span>
+                            </div>
                         </div>
 
                         <div class="overview-card">
-                            <div class="overview-icon violet">🗺️</div>
-                            <div>
+                            <div class="overview-icon violet">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 5.5h16v13H4z" fill="#d1fae5" stroke="#10b981" stroke-width="1.4" rx="2"/><path d="M4 10h16M4 14.5h16M10 5.5v13" stroke="#10b981" stroke-width="1.2"/><circle cx="7" cy="7.5" r="1" fill="#10b981"/></svg>
+                            </div>
+                            <div class="overview-text">
                                 <div class="overview-value"><span id="statZones">0</span> <span class="muted">/ 18</span></div>
                                 <div class="overview-label">Zones Covered</div>
                             </div>
-                        </div>
-
-                        <div class="overview-card">
-                            <div class="overview-icon emerald">🛤️</div>
-                            <div>
-                                <div class="overview-value"><span id="statNetwork">0</span>%</div>
-                                <div class="overview-label">Network Explored</div>
+                            <div class="overview-progress-wrap">
+                                <div class="overview-progress green"><span id="progZones" style="width:0%"></span></div>
+                                <span class="overview-pct" id="pctZones">0%</span>
                             </div>
                         </div>
 
                         <div class="overview-card">
-                            <div class="overview-icon amber">⏱️</div>
-                            <div>
+                            <div class="overview-icon emerald">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/><path d="M3 12h18M12 3c2.5 3 4 6 4 9s-1.5 6-4 9c-2.5-3-4-6-4-9s1.5-6 4-9z" stroke="#3b82f6" stroke-width="1.2"/></svg>
+                            </div>
+                            <div class="overview-text">
+                                <div class="overview-value"><span id="statNetwork">0</span>%</div>
+                                <div class="overview-label">Network Explored</div>
+                            </div>
+                            <div class="overview-progress-wrap">
+                                <div class="overview-progress blue"><span id="progNetwork" style="width:0%"></span></div>
+                                <span class="overview-pct" id="pctNetwork">0%</span>
+                            </div>
+                        </div>
+
+                        <div class="overview-card">
+                            <div class="overview-icon amber">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="#ffedd5" stroke="#f59e0b" stroke-width="1.5"/><path d="M12 7v5l3 2" stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round"/></svg>
+                            </div>
+                            <div class="overview-text">
                                 <div class="overview-value"><span id="statTravelTime">0h</span></div>
                                 <div class="overview-label">Total Travel Time</div>
+                            </div>
+                            <div class="overview-progress-wrap">
+                                <div class="overview-progress amber"><span id="progTravel" style="width:40%"></span></div>
                             </div>
                         </div>
                     </div>
@@ -508,6 +571,120 @@
                 </div>
             </section>
 
+            <!-- ========== ABOUT VIEW ========== -->
+            <section id="view-about" class="view">
+                <div class="page-back-bar">
+                    <button type="button" class="page-back-btn" data-back-to="dashboard">← Back to Dashboard</button>
+                </div>
+
+                <div class="about-page-header">
+                    <div class="about-title-block">
+                        <h2>About Rail Footprint</h2>
+                        <p class="about-subtitle">Meet the developer behind Rail Footprint</p>
+                    </div>
+                    <div class="about-header-art" aria-hidden="true">
+                        <picture>
+                            <source srcset="assets/img/vande-about-banner.webp" type="image/webp">
+                            <img class="about-train-art vb-about" src="assets/img/vande-about-banner.png" alt="" width="960" height="281" loading="lazy" decoding="async">
+                        </picture>
+                    </div>
+                </div>
+
+                <div class="about-profile-card glass-card">
+                    <div class="about-profile-left">
+                        <div class="about-avatar-wrap">
+                            <img id="aboutAvatar" class="about-avatar" src="https://ui-avatars.com/api/?name=Harsh+Raj&background=4f46e5&color=fff&size=160" alt="Developer">
+                            <span class="about-online-dot" title="Online"></span>
+                        </div>
+                        <div class="about-profile-info">
+                            <h3 id="aboutName">Harsh Raj</h3>
+                            <p id="aboutRole" class="about-role">Rail explorer &amp; builder</p>
+                            <p id="aboutBio" class="about-bio">Rail Footprint helps you track every train journey across India — stations, zones, distance, and memories on one beautiful map.</p>
+                            <div class="about-tags" id="aboutTags">
+                                <!-- filled by JS -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="about-profile-stats">
+                        <div class="about-mini-stat">
+                            <div class="about-mini-ico blue">🚆</div>
+                            <div class="about-mini-val" id="aboutStatJourneys">0</div>
+                            <div class="about-mini-lbl">Journeys Tracked</div>
+                        </div>
+                        <div class="about-mini-stat">
+                            <div class="about-mini-ico rose">📍</div>
+                            <div class="about-mini-val" id="aboutStatStations">0</div>
+                            <div class="about-mini-lbl">Stations Visited</div>
+                        </div>
+                        <div class="about-mini-stat">
+                            <div class="about-mini-ico green">🗺️</div>
+                            <div class="about-mini-val" id="aboutStatDistance">0 km</div>
+                            <div class="about-mini-lbl">Distance Covered</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="about-mid-row">
+                    <div class="about-connect glass-card">
+                        <h3 class="about-section-title">Connect with me</h3>
+                        <div class="social-grid" id="aboutSocialGrid"></div>
+                    </div>
+                    <div class="about-quote glass-card">
+                        <div class="quote-mark">“</div>
+                        <p id="aboutQuote" class="quote-text">Every journey leaves a memory, and every memory builds the map.</p>
+                        <p id="aboutQuoteAuthor" class="quote-author">— Keep exploring, keep enjoying the rails!</p>
+                    </div>
+                </div>
+
+                <div class="about-app-card glass-card">
+                    <div class="about-app-left">
+                        <h3 class="about-section-title">About the App</h3>
+                        <ul class="about-meta-list">
+                            <li>
+                                <span class="meta-ico">🚆</span>
+                                <strong>Name</strong>
+                                <span id="aboutAppName">Rail Footprint</span>
+                            </li>
+                            <li>
+                                <span class="meta-ico">🎯</span>
+                                <strong>Focus</strong>
+                                <span id="aboutAppFocus">Indian Railways journeys</span>
+                            </li>
+                            <li>
+                                <span class="meta-ico">🔒</span>
+                                <strong>Privacy</strong>
+                                <span id="aboutAppPrivacy">Your journeys stay on your account</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="about-app-art" aria-hidden="true">
+                        <svg width="160" height="140" viewBox="0 0 160 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <ellipse cx="80" cy="128" rx="50" ry="6" fill="rgba(15,23,42,0.08)"/>
+                          <!-- backpack -->
+                          <path d="M48 48 h64 a12 12 0 0 1 12 12 v52 a14 14 0 0 1 -14 14 H50 a14 14 0 0 1 -14 -14 V60 a12 12 0 0 1 12 -12z" fill="#3b82f6"/>
+                          <path d="M55 48 V40 a25 25 0 0 1 50 0 v8" stroke="#2563eb" stroke-width="8" fill="none" stroke-linecap="round"/>
+                          <rect x="58" y="62" width="44" height="32" rx="8" fill="#93c5fd"/>
+                          <path d="M70 78 h20" stroke="#1d4ed8" stroke-width="3" stroke-linecap="round"/>
+                          <circle cx="68" cy="108" r="4" fill="#bfdbfe"/>
+                          <circle cx="92" cy="108" r="4" fill="#bfdbfe"/>
+                          <!-- map folded -->
+                          <g transform="translate(100,28) rotate(12)">
+                            <path d="M0 20 L18 8 L36 20 L36 48 L18 58 L0 48 Z" fill="#60a5fa"/>
+                            <path d="M18 8 V58 M0 20 L18 28 L36 20" stroke="#fff" stroke-width="1.5" opacity="0.7"/>
+                            <circle cx="18" cy="34" r="3" fill="#fbbf24"/>
+                          </g>
+                          <!-- camera -->
+                          <g transform="translate(28,95)">
+                            <rect x="0" y="8" width="36" height="24" rx="6" fill="#1e3a8a"/>
+                            <circle cx="18" cy="20" r="7" fill="#93c5fd"/>
+                            <circle cx="18" cy="20" r="3.5" fill="#1e293b"/>
+                            <rect x="8" y="4" width="12" height="6" rx="2" fill="#334155"/>
+                          </g>
+                        </svg>
+                    </div>
+                </div>
+            </section>
+
             <!-- ========== SETTINGS VIEW ========== -->
             <section id="view-settings" class="view">
                 <div class="page-back-bar">
@@ -552,6 +729,22 @@
                     <label class="settings-pref-row">
                         <input type="checkbox" id="prefConfirmDelete" checked>
                         <span>Confirm before deleting a journey</span>
+                    </label>
+                    <label class="settings-pref-row">
+                        <input type="checkbox" id="prefHighContrast">
+                        <span>High-contrast map markers</span>
+                    </label>
+                    <label class="settings-pref-row">
+                        <input type="checkbox" id="prefAutoFitRoute" checked>
+                        <span>Auto-fit map to route when saving</span>
+                    </label>
+                    <label class="settings-pref-row">
+                        <input type="checkbox" id="prefShowKmLabels" checked>
+                        <span>Show distance labels on journey cards</span>
+                    </label>
+                    <label class="settings-pref-row">
+                        <input type="checkbox" id="prefLowPowerMap">
+                        <span>Low-power map mode (fewer tiles / simpler layers)</span>
                     </label>
                     <div style="margin-top:14px;">
                         <label for="prefDefaultView" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Default screen after sign-in</label>
@@ -600,7 +793,7 @@
                     <h2>🛡️ Admin Panel</h2>
                     <p>Restricted tools for the app owner</p>
                 </div>
-                <div class="admin-grid">
+                <div class="admin-shell"><div class="admin-grid">
                     <div class="glass-card admin-card">
                         <h3>Session</h3>
                         <p id="adminSessionInfo">Sign in as admin to use tools.</p>
@@ -633,6 +826,8 @@
                             <button type="button" class="admin-btn" id="adminPerfSnapshot">Performance snapshot</button>
                             <button type="button" class="admin-btn" id="adminForceStationsRefresh">Force stations refresh</button>
                             <button type="button" class="admin-btn" id="adminScrollTop">Scroll views to top</button>
+                            <button type="button" class="admin-btn" id="adminVerifyStations">Verify station coordinates</button>
+                            <button type="button" class="admin-btn" id="adminDumpRouteSample">Dump sample route (BSB↔NDLS)</button>
                         </div>
                     </div>
                     <div class="glass-card admin-card">
@@ -646,6 +841,7 @@
                             <button type="button" class="admin-btn admin-nav" data-goto="zones">Zones</button>
                             <button type="button" class="admin-btn admin-nav" data-goto="analytics">Analytics</button>
                             <button type="button" class="admin-btn admin-nav" data-goto="explore">Explore</button>
+                            <button type="button" class="admin-btn admin-nav" data-goto="about">About</button>
                             <button type="button" class="admin-btn admin-nav" data-goto="settings">Settings</button>
                         </div>
                     </div>
@@ -654,6 +850,39 @@
                         <p>Cycle themes from admin without leaving this page.</p>
                         <div class="admin-actions">
                             <button type="button" class="admin-btn" id="adminToggleTheme">Cycle light / dark / ocean</button>
+                        </div>
+                    </div>
+                    <div class="glass-card admin-card admin-about-card">
+                        <h3>About page content</h3>
+                        <p>Everything on the public About page is editable here. Social links open in a new tab for users.</p>
+                        <div class="admin-about-form">
+                            <label>Display name</label>
+                            <input type="text" id="adminAboutName" maxlength="80" placeholder="Your name">
+                            <label>Role / title</label>
+                            <input type="text" id="adminAboutRole" maxlength="80" placeholder="e.g. Rail explorer &amp; builder">
+                            <label>Bio</label>
+                            <textarea id="adminAboutBio" rows="4" maxlength="800" placeholder="Short intro for visitors"></textarea>
+                            <label>Avatar image URL</label>
+                            <input type="url" id="adminAboutAvatar" placeholder="https://…">
+                            <label>Tags (comma-separated, e.g. India, Full Stack Developer, Rail Enthusiast)</label>
+                            <input type="text" id="adminAboutTags" maxlength="200" placeholder="India, Full Stack Developer, Rail Enthusiast">
+                            <label>Quote</label>
+                            <textarea id="adminAboutQuote" rows="2" maxlength="300" placeholder="Every journey leaves a memory…"></textarea>
+                            <label>Quote caption / author line</label>
+                            <input type="text" id="adminAboutQuoteAuthor" maxlength="120" placeholder="— Keep exploring, keep enjoying the rails!">
+                            <label>App name</label>
+                            <input type="text" id="adminAboutAppName" maxlength="80" placeholder="Rail Footprint">
+                            <label>App focus</label>
+                            <input type="text" id="adminAboutAppFocus" maxlength="120" placeholder="Indian Railways journeys">
+                            <label>App privacy line</label>
+                            <input type="text" id="adminAboutAppPrivacy" maxlength="160" placeholder="Your journeys stay on your account">
+                            <label>Social links (one per line: Label | subtitle | https://url)</label>
+                            <textarea id="adminAboutSocial" rows="5" placeholder="X / Twitter | Follow for updates | https://x.com/you&#10;Instagram | See my journey stories | https://instagram.com/you"></textarea>
+                            <div class="admin-actions" style="margin-top:12px;">
+                                <button type="button" class="admin-btn" id="adminSaveAbout">Save About page</button>
+                                <button type="button" class="admin-btn" id="adminResetAbout">Reset to defaults</button>
+                            </div>
+                            <p id="adminAboutStatus" style="margin:8px 0 0;font-size:12px;color:var(--text-secondary);"></p>
                         </div>
                     </div>
                     <div class="glass-card admin-card danger-card">
@@ -686,6 +915,7 @@
                     <div id="adminZonesGrid" class="admin-zones-grid"></div>
                     <p id="adminZonesStatus" class="admin-zones-status"></p>
                 </div>
+                </div><!-- /admin-shell -->
             </section>
 
         </div><!-- /views -->
@@ -839,6 +1069,9 @@
         }
         if (viewName === "settings" && typeof window.loadProfileIntoSettings === "function") {
             setTimeout(() => window.loadProfileIntoSettings(), 40);
+        }
+        if (viewName === "about" && typeof window.renderAboutPage === "function") {
+            setTimeout(() => window.renderAboutPage(), 20);
         }
 
         // Admin only

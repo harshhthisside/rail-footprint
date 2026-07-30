@@ -165,6 +165,11 @@ function searchStations(query, container, input) {
             const ac = (a.code || "").toLowerCase();
             const bc = (b.code || "").toLowerCase();
 
+            // Prefer entries that already have a graph_node (accurate snaps)
+            const ag = a.graph_node != null ? 0 : 1;
+            const bg = b.graph_node != null ? 0 : 1;
+            if (ag !== bg) return ag - bg;
+
             // Exact code
             if (ac === query && bc !== query) return -1;
             if (bc === query && ac !== query) return 1;
@@ -184,6 +189,13 @@ function searchStations(query, container, input) {
             // Shorter names first
             return an.length - bn.length;
 
+        })
+
+        // Deduplicate by station code so wrong duplicate entries never surface
+        .filter((station, idx, arr) => {
+            const code = (station.code || "").toUpperCase();
+            if (!code) return true;
+            return arr.findIndex((s) => (s.code || "").toUpperCase() === code) === idx;
         })
 
         .slice(0, 10);
