@@ -490,10 +490,7 @@ export async function loadStatistics() {
     setPct("pctStates", statesPct);
     setPct("pctZones", zonesPct);
     setPct("pctNetwork", netPct);
-    // Keep About mini-stats in sync
-    set("aboutStatJourneys", stats.journeys.toLocaleString());
-    set("aboutStatStations", stats.stations.toLocaleString());
-    set("aboutStatDistance", `${stats.distance.toLocaleString()} km`);
+    // About mini-stats are owner/admin snapshots (see about.js) — do not overwrite with user stats
 
     // Analytics view
     set("analyticsJourneys", stats.journeys.toLocaleString());

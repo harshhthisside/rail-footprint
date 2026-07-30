@@ -81,7 +81,8 @@ import {
 
 import {
     initializeAboutAdmin,
-    renderAboutPage
+    renderAboutPage,
+    applyAboutVisibility
 } from "./about.js";
 
 
@@ -435,7 +436,9 @@ if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
         initializeAdminPanel();
         initializeAboutAdmin();
         renderAboutPage();
+        applyAboutVisibility();
         window.renderAboutPage = renderAboutPage;
+        window.applyAboutVisibility = applyAboutVisibility;
         window.updateAdminVisibility = updateAdminVisibility;
         window.renderZonesPage = renderZonesPage;
 

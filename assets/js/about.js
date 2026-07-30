@@ -1,8 +1,10 @@
 // ==========================================
 // About page — public content + admin editor
+// Stats shown are the owner's (admin) snapshot, not the signed-in user.
 // ==========================================
 
 const ABOUT_KEY = "rf_about_content_v1";
+const ABOUT_VIS_KEY = "rf_about_visible_v1";
 
 const DEFAULT_ABOUT = {
     name: "Harsh Raj",
@@ -18,7 +20,13 @@ const DEFAULT_ABOUT = {
     social: [
         { label: "X / Twitter", subtitle: "Follow for updates", url: "https://x.com" },
         { label: "Instagram", subtitle: "See my journey stories", url: "https://instagram.com" }
-    ]
+    ],
+    // Owner footprint shown on About (independent of who is signed in)
+    stats: {
+        journeys: 0,
+        stations: 0,
+        distance: 0
+    }
 };
 
 function loadAbout() {
@@ -26,6 +34,7 @@ function loadAbout() {
         const raw = localStorage.getItem(ABOUT_KEY);
         if (!raw) return structuredClone(DEFAULT_ABOUT);
         const p = JSON.parse(raw);
+        const stats = p.stats && typeof p.stats === "object" ? p.stats : {};
         return {
             name: p.name || DEFAULT_ABOUT.name,
             role: p.role || DEFAULT_ABOUT.role,
@@ -37,7 +46,12 @@ function loadAbout() {
             appName: p.appName || DEFAULT_ABOUT.appName,
             appFocus: p.appFocus || DEFAULT_ABOUT.appFocus,
             appPrivacy: p.appPrivacy || DEFAULT_ABOUT.appPrivacy,
-            social: Array.isArray(p.social) && p.social.length ? p.social : structuredClone(DEFAULT_ABOUT.social)
+            social: Array.isArray(p.social) && p.social.length ? p.social : structuredClone(DEFAULT_ABOUT.social),
+            stats: {
+                journeys: Number(stats.journeys) || 0,
+                stations: Number(stats.stations) || 0,
+                distance: Number(stats.distance) || 0
+            }
         };
     } catch (_) {
         return structuredClone(DEFAULT_ABOUT);
@@ -46,6 +60,51 @@ function loadAbout() {
 
 function saveAbout(data) {
     localStorage.setItem(ABOUT_KEY, JSON.stringify(data));
+}
+
+export function isAboutVisible() {
+    try {
+        const v = localStorage.getItem(ABOUT_VIS_KEY);
+        if (v === null || v === undefined) return true;
+        return v === "1" || v === "true";
+    } catch (_) {
+        return true;
+    }
+}
+
+export function setAboutVisible(visible) {
+    localStorage.setItem(ABOUT_VIS_KEY, visible ? "1" : "0");
+    applyAboutVisibility();
+}
+
+/** Show/hide About nav for everyone; admin can still open via Admin panel. */
+export function applyAboutVisibility() {
+    const visible = isAboutVisible();
+    document.querySelectorAll('.nav-item[data-view="about"]').forEach((el) => {
+        el.style.display = visible ? "" : "none";
+    });
+    // If currently on About while hidden, leave for non-admins (admin can stay)
+    const aboutView = document.getElementById("view-about");
+    if (!visible && aboutView && aboutView.classList.contains("active")) {
+        const adminNav = document.getElementById("adminNavItem");
+        const isAdminNav = adminNav && adminNav.style.display !== "none";
+        if (!isAdminNav && typeof window.switchView === "function") {
+            window.switchView("dashboard", { skipHistory: true });
+        }
+    }
+    // Reflect toggle button state in admin UI
+    const btn = document.getElementById("adminToggleAboutVisibility");
+    if (btn) {
+        btn.textContent = visible ? "Hide About section" : "Show About section";
+        btn.setAttribute("aria-pressed", visible ? "false" : "true");
+        btn.classList.toggle("admin-danger", visible);
+    }
+    const lbl = document.getElementById("adminAboutVisibilityStatus");
+    if (lbl) {
+        lbl.textContent = visible
+            ? "About is visible in the sidebar for all users."
+            : "About is hidden from the sidebar. Open it from Admin → Quick navigation while editing.";
+    }
 }
 
 function escapeHtml(str) {
@@ -85,6 +144,22 @@ function parseSocialText(text) {
             return null;
         })
         .filter(Boolean);
+}
+
+function formatDistance(km) {
+    const n = Number(km) || 0;
+    return `${n.toLocaleString()} km`;
+}
+
+function applyOwnerStatsToDom(stats) {
+    const s = stats || { journeys: 0, stations: 0, distance: 0 };
+    const set = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    };
+    set("aboutStatJourneys", (Number(s.journeys) || 0).toLocaleString());
+    set("aboutStatStations", (Number(s.stations) || 0).toLocaleString());
+    set("aboutStatDistance", formatDistance(s.distance));
 }
 
 export function renderAboutPage() {
@@ -139,15 +214,28 @@ export function renderAboutPage() {
         }
     }
 
-    // Mirror live dashboard stats when available
-    const copy = (from, to) => {
-        const a = document.getElementById(from);
-        const b = document.getElementById(to);
-        if (a && b) b.textContent = a.textContent;
+    // Always show owner/admin snapshot — never the signed-in user's live stats
+    applyOwnerStatsToDom(data.stats);
+    applyAboutVisibility();
+}
+
+/** Capture current dashboard numbers into About owner stats (call while signed in as admin). */
+export function syncAdminStatsToAbout() {
+    const parseNum = (id) => {
+        const el = document.getElementById(id);
+        if (!el) return 0;
+        const n = parseInt(String(el.textContent || "").replace(/[^\d]/g, ""), 10);
+        return Number.isFinite(n) ? n : 0;
     };
-    copy("statJourneys", "aboutStatJourneys");
-    copy("statStations", "aboutStatStations");
-    copy("statDistance", "aboutStatDistance");
+    const data = loadAbout();
+    data.stats = {
+        journeys: parseNum("statJourneys"),
+        stations: parseNum("statStations"),
+        distance: parseNum("statDistance")
+    };
+    saveAbout(data);
+    applyOwnerStatsToDom(data.stats);
+    return data.stats;
 }
 
 export function fillAdminAboutForm() {
@@ -172,16 +260,25 @@ export function fillAdminAboutForm() {
             .map((s) => (s.subtitle ? `${s.label} | ${s.subtitle} | ${s.url}` : `${s.label} | ${s.url}`))
             .join("\n")
     );
+    set("adminAboutStatJourneys", String(data.stats?.journeys ?? 0));
+    set("adminAboutStatStations", String(data.stats?.stations ?? 0));
+    set("adminAboutStatDistance", String(data.stats?.distance ?? 0));
+    applyAboutVisibility();
 }
 
 export function initializeAboutAdmin() {
     document.getElementById("adminSaveAbout")?.addEventListener("click", () => {
         const val = (id) => document.getElementById(id)?.value?.trim() || "";
+        const num = (id) => {
+            const n = parseInt(val(id).replace(/[^\d]/g, ""), 10);
+            return Number.isFinite(n) ? n : 0;
+        };
         const tags = val("adminAboutTags")
             .split(",")
             .map((t) => t.trim())
             .filter(Boolean);
         const social = parseSocialText(val("adminAboutSocial"));
+        const prev = loadAbout();
         const data = {
             name: val("adminAboutName") || DEFAULT_ABOUT.name,
             role: val("adminAboutRole") || DEFAULT_ABOUT.role,
@@ -193,7 +290,12 @@ export function initializeAboutAdmin() {
             appName: val("adminAboutAppName") || DEFAULT_ABOUT.appName,
             appFocus: val("adminAboutAppFocus") || DEFAULT_ABOUT.appFocus,
             appPrivacy: val("adminAboutAppPrivacy") || DEFAULT_ABOUT.appPrivacy,
-            social: social.length ? social : structuredClone(DEFAULT_ABOUT.social)
+            social: social.length ? social : structuredClone(DEFAULT_ABOUT.social),
+            stats: {
+                journeys: num("adminAboutStatJourneys") || prev.stats?.journeys || 0,
+                stations: num("adminAboutStatStations") || prev.stats?.stations || 0,
+                distance: num("adminAboutStatDistance") || prev.stats?.distance || 0
+            }
         };
         saveAbout(data);
         renderAboutPage();
@@ -210,6 +312,26 @@ export function initializeAboutAdmin() {
         if (st) st.textContent = "Reset to defaults.";
     });
 
+    document.getElementById("adminSyncAboutStats")?.addEventListener("click", () => {
+        const stats = syncAdminStatsToAbout();
+        fillAdminAboutForm();
+        const st = document.getElementById("adminAboutStatus");
+        if (st) {
+            st.textContent = `Owner stats synced: ${stats.journeys} journeys · ${stats.stations} stations · ${stats.distance.toLocaleString()} km`;
+        }
+    });
+
+    document.getElementById("adminToggleAboutVisibility")?.addEventListener("click", () => {
+        const next = !isAboutVisible();
+        setAboutVisible(next);
+        const st = document.getElementById("adminAboutStatus");
+        if (st) {
+            st.textContent = next
+                ? "About section is now visible in the sidebar."
+                : "About section is hidden from users. You can still open it from Admin → Quick navigation.";
+        }
+    });
+
     fillAdminAboutForm();
     renderAboutPage();
 }
@@ -217,3 +339,8 @@ export function initializeAboutAdmin() {
 export function getAboutData() {
     return loadAbout();
 }
+
+// Expose for inline switchView / other modules
+window.renderAboutPage = renderAboutPage;
+window.applyAboutVisibility = applyAboutVisibility;
+window.isAboutVisible = isAboutVisible;

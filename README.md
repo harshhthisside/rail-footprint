@@ -1,10 +1,10 @@
 # Rail Footprint
 
 ## Update
-- **Longest Journey** train art: recropped strictly inside the cream card (no outer page white)
-- Matches reference layout — train fills the right side, cream edges blend with card
-- About header banner retained; responsive desktop / tablet / mobile
-- WebP-first assets for performance
+- **About stats** always show the **owner/admin** footprint (not the signed-in user)
+  - Admin → About page content → edit numbers or **Sync my stats to About**
+- **Hide / Show About** in Admin panel (sidebar About nav toggles for all users; admin can still open via Quick navigation)
+- Vande Bharat art crops; WebP-first; responsive desktop / tablet / mobile
 
 ```bash
 cd rail-footprint && python3 -m http.server 8080

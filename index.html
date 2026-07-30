@@ -82,7 +82,7 @@
                 <span class="nav-icon">🌍</span>
                 <span>Explore</span>
             </a>
-            <a href="#" class="nav-item" data-view="about">
+            <a href="#" class="nav-item" data-view="about" id="aboutNavItem">
                 <span class="nav-icon">ℹ️</span>
                 <span>About</span>
             </a>
@@ -854,8 +854,19 @@
                     </div>
                     <div class="glass-card admin-card admin-about-card">
                         <h3>About page content</h3>
-                        <p>Everything on the public About page is editable here. Social links open in a new tab for users.</p>
+                        <p>Everything on the public About page is editable here. Social links open in a new tab for users. Stats on About always show the <strong>owner</strong> footprint (not the signed-in visitor).</p>
+                        <div class="admin-actions" style="margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+                            <button type="button" class="admin-btn" id="adminToggleAboutVisibility">Hide About section</button>
+                            <button type="button" class="admin-btn" id="adminSyncAboutStats">Sync my stats to About</button>
+                        </div>
+                        <p id="adminAboutVisibilityStatus" style="margin:0 0 12px;font-size:12px;color:var(--text-secondary);"></p>
                         <div class="admin-about-form">
+                            <label>Owner journeys (About)</label>
+                            <input type="number" id="adminAboutStatJourneys" min="0" step="1" placeholder="0">
+                            <label>Owner stations (About)</label>
+                            <input type="number" id="adminAboutStatStations" min="0" step="1" placeholder="0">
+                            <label>Owner distance km (About)</label>
+                            <input type="number" id="adminAboutStatDistance" min="0" step="1" placeholder="0">
                             <label>Display name</label>
                             <input type="text" id="adminAboutName" maxlength="80" placeholder="Your name">
                             <label>Role / title</label>
@@ -1070,8 +1081,17 @@
         if (viewName === "settings" && typeof window.loadProfileIntoSettings === "function") {
             setTimeout(() => window.loadProfileIntoSettings(), 40);
         }
-        if (viewName === "about" && typeof window.renderAboutPage === "function") {
-            setTimeout(() => window.renderAboutPage(), 20);
+        if (viewName === "about") {
+            const aboutHidden = typeof window.isAboutVisible === "function" && !window.isAboutVisible();
+            const adminNav = document.getElementById("adminNavItem");
+            const isAdmin = adminNav && adminNav.style.display !== "none";
+            if (aboutHidden && !isAdmin) {
+                switchView("dashboard", { skipHistory: true });
+                return;
+            }
+            if (typeof window.renderAboutPage === "function") {
+                setTimeout(() => window.renderAboutPage(), 20);
+            }
         }
 
         // Admin only
@@ -1085,6 +1105,9 @@
     }
 
     window.switchView = switchView;
+    if (typeof window.applyAboutVisibility === "function") {
+        try { window.applyAboutVisibility(); } catch (_) {}
+    }
 
     // Sidebar nav
     document.querySelectorAll(".nav-item").forEach(item => {
