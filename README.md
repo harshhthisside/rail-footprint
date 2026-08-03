@@ -212,3 +212,21 @@ Other corridors (BEHS–SHK, NEO–JTDM, ARA–SSM) unchanged and verified.
 | Approach | west via JSME then back | east from Banka direction straight into DGHR |
 
 DGHR–MHUR, DGHR–JSME, FUT–DHWN, BEHS–SHK, NEO–JTDM still verified.
+
+## DHWN–IPR Fatuha–Natesar alignment (2026-08-03 l)
+
+**Bug:** Daniyawan Junction (DHWN) → Islampur (IPR) routed ~98 km east via Bihar Sharif → Rajgir → west into Islampur, instead of the direct **Fatuha–Natesar** passenger line (~33–35 km).
+
+**Fix:** Injected densified ECR track chain along Fatuha–Natesar from DHWN south to IPR:
+
+| Segment | Before | After |
+|---------|--------|-------|
+| DHWN–IPR | ~98 km (via BEHS/RGD) | **33.2 km** (310 nodes, track-following) |
+| DHWN–PNBE | unchanged | ~31 km |
+| FUT–DHWN | unchanged | 9.6 km |
+| IPR–RGD | unchanged | ~36 km |
+| DHWN–BEHS | unchanged | 38 km |
+
+- 386 intermediate graph nodes (~90 m spacing) from ECR ways (696369148, 696372995, 705733491, 695615935, 695615954, 1155178955, etc.).
+- Cross-linked to nearby main-network nodes along the corridor.
+- No long straight hops; preview polyline follows the real southbound alignment past Hilsa / Ekangarsarai area into Islampur.
