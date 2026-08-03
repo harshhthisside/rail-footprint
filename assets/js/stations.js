@@ -8,12 +8,22 @@ import { findNearestNode } from "./routing.js";
 
 let stations = [];
 
-const CODE_ALIASES = { SRNG: "SANG", SRANG: "SANG", CSTM: "CSMT" };
+const CODE_ALIASES = {
+    SRNG: "SANG", SRANG: "SANG", CSTM: "CSMT",
+    CBE: "CBE", COIMBATORE: "CBE", "COIMBATORE JN": "CBE", "COIMBATORE JUNCTION": "CBE",
+    KRNT: "KRNT", KURNOOL: "KRNT", "KURNOOL CITY": "KRNT",
+    BNDA: "BNDA", BANDA: "BNDA", "BANDA JN": "BNDA", "BANDA JUNCTION": "BNDA"
+};
 function expandSearchQuery(q) {
     const t = String(q || "").trim().toLowerCase();
     const up = t.toUpperCase();
     const alias = CODE_ALIASES[up];
-    return alias ? [t, alias.toLowerCase()] : [t];
+    const terms = [t];
+    if (alias) terms.push(alias.toLowerCase());
+    // also try without "jn"/"junction" noise
+    const stripped = t.replace(/\b(jn|junction|city|road)\b/g, "").replace(/\s+/g, " ").trim();
+    if (stripped && stripped !== t) terms.push(stripped);
+    return terms;
 }
 
 
