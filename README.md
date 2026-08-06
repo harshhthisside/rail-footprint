@@ -1,5 +1,45 @@
 # Rail Footprint
 
+## Updates (2026-08-06) — Live colors, dynamic admin users, performance
+
+### Global route & premium colors (instant for all users)
+- Palette is published to Firestore **`appConfig/routeColors`**.
+- Every open client listens with `onSnapshot` — color changes apply **immediately** (maps redraw without reload).
+- Settings → Save publishes the global palette; Reset also publishes defaults.
+- Same security model as About: public read, admin write on `appConfig`.
+
+### Admin — Registered users (dynamic)
+- List auto-refreshes every **30 seconds** while the Admin view is open.
+- Refreshes when the tab becomes visible again and when entering Admin.
+- Manual **Refresh** always bypasses cache so new sign-ins appear right away.
+
+### Earlier polish
+- Premium Journey Map India-fit default + Priority filter on load.
+- Admin Panel UI revamp (hierarchy, hover, responsive cards).
+
+## Premium Journey Map — Clean Priority Rendering (2026-08-06)
+
+The Premium Journey Map shows clean railway corridors with no intermediate-station clutter.
+
+### Route rendering
+1. Resolves each journey onto the **railway graph** (node A → node B edges via Dijkstra).
+2. Detects **shared segments** and merges identical edges so each railway edge is drawn **exactly once**.
+3. Colours each run by the **highest-priority category** on that segment (single visible polyline).
+4. Fixed priority: **Rajdhani → Vande Bharat → Shatabdi → Tejas → Duronto → Others**.
+5. Runs drawn in ascending priority order (highest last → top z-index).
+6. **Only source and destination markers** are shown on the Premium map. Intermediate stations exist for routing but are never rendered visually here (they remain visible in Add Journey, My Journey, route editor, and the Normal Journey map).
+
+### Map controls
+- **Category** filter
+- **Display** mode: Priority (by category) / Normal (classic)
+- **Thickness**: Thin / Normal (default; persists until changed; live update at any zoom)
+- **Station markers** toggle (source + destination only)
+- Station labels / Route labels
+
+Hover, journey list, selection, tooltips, stats, export, spectator mode, search and zoom behaviour are unchanged.
+
+Implementation: `assets/js/premiumJourney.js` and `assets/js/routing.js` (`calculateRouteNodes`).
+
 ## About (public for all users)
 
 Stored in Firestore: **`appConfig/about`**
@@ -230,3 +270,128 @@ DGHR–MHUR, DGHR–JSME, FUT–DHWN, BEHS–SHK, NEO–JTDM still verified.
 - 386 intermediate graph nodes (~90 m spacing) from ECR ways (696369148, 696372995, 705733491, 695615935, 695615954, 1155178955, etc.).
 - Cross-linked to nearby main-network nodes along the corridor.
 - No long straight hops; preview polyline follows the real southbound alignment past Hilsa / Ekangarsarai area into Islampur.
+
+
+## Premium Dashboard V2 (2026-08-04)
+
+- Premium Dashboard UI revamp (glassmorphism, summary banner, refined map/toolbar).
+- Removed Recent Premium Journeys from dashboard (management only in My Journeys).
+- Sidebar: Premium Journey sits after Add Journey.
+- Explore → View Premium Dashboard fixed (`openUserPremiumFootprint`).
+- Full Premium journey editing with live route recalculation.
+- Date + notes fields; category color live updates on map/cards.
+
+
+## Premium Journeys cloud sync (Explore)
+
+Premium journeys are stored in Firestore collection **`premiumJourneys`** (field `owner` = uid) so Explore spectators can load another user’s Premium Dashboard.
+
+Publish rules similar to `journeys` (adjust email if needed):
+
+```
+match /premiumJourneys/{docId} {
+  allow read: if true;
+  allow create, update, delete:
+    if request.auth != null
+    && request.resource.data.owner == request.auth.uid;
+  allow delete:
+    if request.auth != null
+    && resource.data.owner == request.auth.uid;
+}
+```
+
+LocalStorage remains the offline cache for the signed-in device.
+
+
+## Performance + Explore Premium Dashboard (2026-08-04)
+
+### Explore → Premium Dashboard (critical fix)
+- Spectator Premium Dashboard now loads **only** the selected user’s `premiumJourneys` by UID (`loadUserPremiumJourneys`).
+- `setPremiumData(list, true, { ownerName, ownerUid })` applies spectator data before view switch and re-applies after layout.
+- Own cloud merge (`pullOwnPremiumFromCloud`) is blocked while `readOnly` / `__rfSpectatorUid` is set.
+- Straight-line coordinate fallback when graph route rebuild is unavailable so map routes are not blank.
+- Spectator dashboard shows **Premium Journey cards** (`#premiumSpectatorCards`) with Focus-on-map.
+- Navigation: ← Back to User Dashboard, ← Back to Explore, ← My Footprint (restores own premium via `restoreOwnPremiumData`).
+
+### Performance
+- Explore user list: parallel journey fetches (concurrency 6) instead of sequential N+1.
+- Premium map redraws batched via `requestAnimationFrame`.
+- Premium search remains debounced; switchView invalidates premium map size on enter.
+
+
+## Explore Premium data + map zoom (2026-08-04 b)
+
+- **Spectator empty data fix:** `__rfLoadUserPremiumJourneys` merges Firestore + localStorage when the target UID is the signed-in user (so Explore → own Premium no longer shows 0 when trips only lived on-device). Local rows are pushed to `premiumJourneys` for other spectators.
+- **Map zoom:** Premium dashboard / refresh / Reset view always use India overview (`setView [22,80] zoom 4.8`). Corridor `fitBounds` is only used for explicit “Focus on map”.
+- Publish Firestore rules for public read on `premiumJourneys` (see earlier section).
+
+
+## Production readiness (2026-08-04 final)
+
+### Explore Premium (Firestore)
+- Root cause of empty spectator data: writes failed with `invalid-argument` because Firestore **rejects nested arrays**.
+- Coordinates are stored as `[{lat, lon}, …]` (not `[[lat,lon],…]`).
+- Loader normalizes either format back to `[lat,lon]` for Leaflet.
+- After deploy: sign in as owner → open Premium → `await publishAllPremiumToCloud()` → `premiumJourneys` collection appears automatically.
+
+### Rules (publish in Firebase Console)
+```
+match /premiumJourneys/{id} {
+  allow read: if true;
+  allow create: if request.auth != null && request.resource.data.owner == request.auth.uid;
+  allow update: if request.auth != null && resource.data.owner == request.auth.uid
+    && request.resource.data.owner == resource.data.owner;
+  allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
+}
+```
+
+### Performance
+- Explore user list: parallel fetches (concurrency 6)
+- Premium redraw batched via rAF; India overview on open/refresh
+- Debounced premium search; graph spatial grid + typed Dijkstra buffers
+- Preconnect hints for Firebase / tiles
+
+
+## Premium Export map viewport (2026-08-04)
+
+### Problem
+Premium infographic export sometimes auto-zoomed to active route bounds (e.g. North India corridor only), cropping the full footprint even though the live Premium Dashboard used an India-centered view.
+
+### Fix (`assets/js/premiumJourney.js`)
+- **Export lock** (`__rfPremiumExportLock`): while exporting, `fitPremiumBounds` and Focus-on-map corridor zooms are no-ops.
+- **Fixed India frame**: dashboard, Reset view, and export all use `fitBounds` on `[7.5,68.5]–[35.5,97.0]` with `maxZoom: 5.2` and padding `[18,18]` — same framing as the Normal Journey map/export.
+- Export path: switch to Dashboard → redraw all premium routes → force India overview (multiple times with settle waits) → `html2canvas` capture → compose infographic. No `fitBounds` to journey layers during capture.
+- Explicit “Focus on map” still zooms to a single journey when the user requests it (only outside export lock).
+
+### Expected result
+Every Premium PNG matches the live Premium Dashboard: full India visible, balanced composition, complete premium footprint — never cropped to a single corridor.
+
+
+## Performance Optimization Pass (2026-08-04 V2)
+
+Non-breaking performance & stability improvements (UI and features unchanged):
+
+### Routing
+- **Route geometry LRU cache** (`routing.js`) — identical multi-stop queries reuse cached polylines.
+- **Shared MinHeap** reuse in Dijkstra — less GC on mobile when computing many routes.
+- Existing typed-array buffers + spatial grid nearest-node retained.
+
+### Firebase
+- Short **TTL in-memory caches** for `loadJourneys` (~12s) and `loadUsers` (~45s).
+- Cache invalidated on save / update / delete / delete-all.
+- Explore still uses parallel concurrency-6 user journey fetches.
+
+### Search
+- Station search: expand query once; single-pass filter with soft cap before sort (faster on large `station_index`).
+
+### Maps & UI
+- Shared `perf.js` utilities: debounce, throttle, rAF batch, LRU, safe layer remove.
+- Inactive views use `content-visibility: hidden` + `contain` to cut layout/paint cost.
+- Resource preconnect/dns-prefetch for OSM tiles, Firebase, unpkg.
+- Inter font weights trimmed (400–800) for smaller CSS transfer.
+- `prefers-reduced-motion` respected globally.
+
+### Reliability
+- No intentional behavior changes to journeys, premium, explore, export, settings, or auth.
+- Hard-refresh after deploy recommended so updated modules load.
+

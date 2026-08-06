@@ -8,7 +8,9 @@ import {
     loadJourneys,
     deleteAllJourneys,
     getManualZones,
-    saveManualZones
+    saveManualZones,
+    loadUsers,
+    invalidateUsersCache
 } from "./firestore.js";
 import {
     loadStatistics,
@@ -22,11 +24,243 @@ import { renderJourneys } from "./journey.js";
 import { refreshMap } from "./map.js";
 import { renderZonesPage } from "./zones.js";
 import { renderStationsPage } from "./stationsPage.js";
+import { loadStationIndex } from "./dataCache.js";
 
 const ADMIN_EMAILS = ["harshcaptain2310@gmail.com"];
 const ADMIN_UIDS = ["aa1XXicVpPeZzmFWp6DKix7D2012", "aa1XXicVpPeZzmFWp6DKix7D20l2"];
 
 let manualZoneDraft = new Set();
+
+/** Cached admin users list (sorted newest first) */
+let _adminUsersCache = [];
+let _adminUsersSearch = "";
+let _adminUsersLoading = false;
+/** Auto-refresh while Admin view is open so new sign-ups appear without manual refresh */
+let _adminUsersPollTimer = null;
+const ADMIN_USERS_POLL_MS = 30_000;
+
+function startAdminUsersPolling() {
+    stopAdminUsersPolling();
+    _adminUsersPollTimer = setInterval(() => {
+        const adminView = document.getElementById("view-admin");
+        if (!adminView || !adminView.classList.contains("active")) return;
+        if (!isAdminUser(auth.currentUser)) return;
+        loadAndRenderAdminUsers(true).catch(() => {});
+    }, ADMIN_USERS_POLL_MS);
+}
+
+function stopAdminUsersPolling() {
+    if (_adminUsersPollTimer) {
+        clearInterval(_adminUsersPollTimer);
+        _adminUsersPollTimer = null;
+    }
+}
+
+function escapeHtmlAdmin(str) {
+    return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+}
+
+function formatJoinedDate(ts) {
+    const n = Number(ts);
+    if (!Number.isFinite(n) || n <= 0) return "—";
+    try {
+        const d = new Date(n);
+        if (Number.isNaN(d.getTime())) return "—";
+        return d.toLocaleString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit"
+        });
+    } catch {
+        return "—";
+    }
+}
+
+function resolveUserDisplayName(u) {
+    const custom = String(u?.name || "").trim();
+    if (custom) return custom;
+    const google = String(u?.displayName || "").trim();
+    if (google) return google;
+    return "Not set";
+}
+
+function truncateUid(uid) {
+    const s = String(uid || "");
+    if (s.length <= 12) return s || "—";
+    return s.slice(0, 6) + "…" + s.slice(-4);
+}
+
+function getFilteredAdminUsers() {
+    const q = (_adminUsersSearch || "").toLowerCase().trim();
+    let list = _adminUsersCache.slice();
+    if (q) {
+        list = list.filter((u) => {
+            const name = resolveUserDisplayName(u).toLowerCase();
+            const email = String(u.email || "").toLowerCase();
+            const uid = String(u.uid || u.id || "").toLowerCase();
+            return name.includes(q) || email.includes(q) || uid.includes(q);
+        });
+    }
+    return list;
+}
+
+function computeUserJoinStats(list) {
+    const now = Date.now();
+    const d7 = now - 7 * 24 * 60 * 60 * 1000;
+    const d30 = now - 30 * 24 * 60 * 60 * 1000;
+    let last7 = 0;
+    let last30 = 0;
+    for (const u of list) {
+        const t = Number(u.createdAt) || 0;
+        if (t >= d7) last7++;
+        if (t >= d30) last30++;
+    }
+    return { total: list.length, last7, last30 };
+}
+
+function renderAdminUsersListUI() {
+    const listEl = document.getElementById("adminUsersList");
+    const countEl = document.getElementById("adminUsersCount");
+    const statsEl = document.getElementById("adminUsersStats");
+    if (!listEl) return;
+
+    if (_adminUsersLoading) {
+        listEl.innerHTML = `<p class="admin-users-loading">Loading users…</p>`;
+        if (countEl) countEl.textContent = "Loading…";
+        if (statsEl) statsEl.style.display = "none";
+        return;
+    }
+
+    const all = _adminUsersCache;
+    const filtered = getFilteredAdminUsers();
+    const stats = computeUserJoinStats(all);
+
+    if (countEl) {
+        const n = all.length;
+        countEl.textContent =
+            n === 0
+                ? "No signed-in users yet."
+                : `${n} registered user${n === 1 ? "" : "s"}` +
+                  (filtered.length !== n ? ` · showing ${filtered.length}` : "");
+    }
+
+    if (statsEl) {
+        if (all.length > 0) {
+            statsEl.style.display = "flex";
+            statsEl.innerHTML = `
+                <span class="admin-users-stat-pill">Total ${stats.total}</span>
+                <span class="admin-users-stat-pill">Last 7 days ${stats.last7}</span>
+                <span class="admin-users-stat-pill">Last 30 days ${stats.last30}</span>
+            `;
+        } else {
+            statsEl.style.display = "none";
+            statsEl.innerHTML = "";
+        }
+    }
+
+    if (!filtered.length) {
+        listEl.innerHTML = `<p class="admin-users-empty">${
+            all.length ? "No users match your search." : "No signed-in users yet."
+        }</p>`;
+        return;
+    }
+
+    const rows = filtered
+        .map((u) => {
+            const name = escapeHtmlAdmin(resolveUserDisplayName(u));
+            const email = escapeHtmlAdmin(u.email || "—");
+            const joined = escapeHtmlAdmin(formatJoinedDate(u.createdAt));
+            const uid = String(u.uid || u.id || "");
+            const uidShort = escapeHtmlAdmin(truncateUid(uid));
+            const emailAttr = escapeHtmlAdmin(u.email || "");
+            const uidAttr = escapeHtmlAdmin(uid);
+            return `<tr>
+                <td class="admin-users-name">${name}</td>
+                <td><span class="admin-users-email" data-copy-email="${emailAttr}" title="Click to copy email">${email}</span></td>
+                <td>${joined}</td>
+                <td><span class="admin-users-uid" data-copy-uid="${uidAttr}" title="Click to copy UID">${uidShort}</span></td>
+            </tr>`;
+        })
+        .join("");
+
+    listEl.innerHTML = `
+        <table class="admin-users-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Joined</th>
+                    <th>UID</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    `;
+}
+
+async function loadAndRenderAdminUsers(force = false) {
+    const section = document.getElementById("adminUsersSection");
+    if (!section) return;
+    if (!isAdminUser(auth.currentUser)) {
+        section.style.display = "none";
+        return;
+    }
+    section.style.display = "";
+
+    if (_adminUsersLoading) return;
+    _adminUsersLoading = true;
+    renderAdminUsersListUI();
+
+    try {
+        if (force) invalidateUsersCache();
+        const list = await loadUsers();
+        _adminUsersCache = (Array.isArray(list) ? list : [])
+            .map((u) => ({
+                ...u,
+                uid: u.uid || u.id,
+                createdAt: Number(u.createdAt) || 0
+            }))
+            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    } catch (e) {
+        console.warn("loadAndRenderAdminUsers", e);
+        _adminUsersCache = [];
+    } finally {
+        _adminUsersLoading = false;
+        renderAdminUsersListUI();
+    }
+}
+
+function exportAdminUsersCsv() {
+    const list = getFilteredAdminUsers();
+    if (!list.length) {
+        alert("No users to export.");
+        return;
+    }
+    const header = ["Name", "Email", "Joined", "UID"];
+    const lines = [header.join(",")];
+    for (const u of list) {
+        const name = resolveUserDisplayName(u).replace(/"/g, '""');
+        const email = String(u.email || "").replace(/"/g, '""');
+        const joined = formatJoinedDate(u.createdAt).replace(/"/g, '""');
+        const uid = String(u.uid || u.id || "").replace(/"/g, '""');
+        lines.push(`"${name}","${email}","${joined}","${uid}"`);
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `rail-footprint-users-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
 
 export function isAdminUser(user) {
     if (!user) return false;
@@ -41,6 +275,9 @@ export function updateAdminVisibility(user) {
     const allowed = isAdminUser(user);
     if (nav) nav.style.display = allowed ? "" : "none";
 
+    const usersSection = document.getElementById("adminUsersSection");
+    if (usersSection) usersSection.style.display = allowed ? "" : "none";
+
     if (!allowed) {
         const adminView = document.getElementById("view-admin");
         if (adminView && adminView.classList.contains("active")) {
@@ -48,10 +285,14 @@ export function updateAdminVisibility(user) {
                 window.switchView("dashboard");
             }
         }
+        _adminUsersCache = [];
+        stopAdminUsersPolling();
     }
     refreshAdminPanel(user);
     if (allowed) {
         renderAdminZonesGrid().catch(() => {});
+        loadAndRenderAdminUsers(false).catch(() => {});
+        startAdminUsersPolling();
     }
 }
 
@@ -129,6 +370,63 @@ async function renderAdminZonesGrid() {
 }
 
 export function initializeAdminPanel() {
+    // Registered users list
+    document.getElementById("adminUsersRefresh")?.addEventListener("click", () => {
+        if (!isAdminUser(auth.currentUser)) {
+            alert("Admin only.");
+            return;
+        }
+        loadAndRenderAdminUsers(true).catch(() => {});
+    });
+
+    document.getElementById("adminUsersExportCsv")?.addEventListener("click", () => {
+        if (!isAdminUser(auth.currentUser)) {
+            alert("Admin only.");
+            return;
+        }
+        exportAdminUsersCsv();
+    });
+
+    const searchEl = document.getElementById("adminUsersSearch");
+    if (searchEl) {
+        let searchTimer = null;
+        searchEl.addEventListener("input", () => {
+            _adminUsersSearch = searchEl.value || "";
+            if (searchTimer) clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => renderAdminUsersListUI(), 120);
+        });
+    }
+
+    document.getElementById("adminUsersList")?.addEventListener("click", async (e) => {
+        const emailEl = e.target.closest("[data-copy-email]");
+        if (emailEl) {
+            const email = emailEl.getAttribute("data-copy-email") || "";
+            if (email && email !== "—") {
+                try {
+                    await navigator.clipboard.writeText(email);
+                    emailEl.title = "Copied!";
+                    setTimeout(() => { emailEl.title = "Click to copy email"; }, 1200);
+                } catch (_) {
+                    alert(email);
+                }
+            }
+            return;
+        }
+        const uidEl = e.target.closest("[data-copy-uid]");
+        if (uidEl) {
+            const uid = uidEl.getAttribute("data-copy-uid") || "";
+            if (uid) {
+                try {
+                    await navigator.clipboard.writeText(uid);
+                    uidEl.title = "Copied!";
+                    setTimeout(() => { uidEl.title = "Click to copy UID"; }, 1200);
+                } catch (_) {
+                    alert(uid);
+                }
+            }
+        }
+    });
+
     document.getElementById("adminRefreshStats")?.addEventListener("click", async () => {
         try {
             await loadStatistics();
@@ -477,8 +775,7 @@ export function initializeAdminPanel() {
 
     document.getElementById("adminVerifyStations")?.addEventListener("click", async () => {
         try {
-            const res = await fetch("assets/data/station_index.json");
-            const stations = await res.json();
+            const stations = await loadStationIndex();
             const critical = ["BSB", "NDLS", "ADI", "MAS", "MAO", "MYS", "MDU", "PAU", "CSMT", "HWH", "SBC"];
             const lines = [];
             let missingNode = 0;
@@ -509,8 +806,7 @@ export function initializeAdminPanel() {
     document.getElementById("adminDumpRouteSample")?.addEventListener("click", async () => {
         try {
             const { calculateRoute, graphNodes } = await import("./routing.js");
-            const res = await fetch("assets/data/station_index.json");
-            const stations = await res.json();
+            const stations = await loadStationIndex();
             const byCode = (c) => stations.find((s) => (s.code || "").toUpperCase() === c);
             const bsb = byCode("BSB");
             const ndls = byCode("NDLS");
@@ -538,5 +834,18 @@ export function initializeAdminPanel() {
         }
     });
 
+    window.refreshAdminUsersList = () => {
+        loadAndRenderAdminUsers(true).catch(() => {});
+        startAdminUsersPolling();
+    };
+    // Refresh list when tab becomes visible again (new users while away)
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState !== "visible") return;
+        if (!isAdminUser(auth.currentUser)) return;
+        const adminView = document.getElementById("view-admin");
+        if (adminView && adminView.classList.contains("active")) {
+            loadAndRenderAdminUsers(true).catch(() => {});
+        }
+    });
     updateAdminVisibility(auth.currentUser);
 }

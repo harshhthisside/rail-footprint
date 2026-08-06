@@ -61,6 +61,18 @@ import {
 } from "./mapExport.js";
 
 import {
+    initializeRouteColors
+} from "./routeColors.js";
+
+import {
+    initializeSettingsColors
+} from "./settingsColors.js";
+
+import {
+    initializePremiumJourneys
+} from "./premiumJourney.js";
+
+import {
     initializeZonesPage,
     renderZonesPage
 } from "./zones.js";
@@ -94,7 +106,7 @@ import {
 
 
 // ==========================================
-// Profile avatar (works with no Google DP)
+// Profile avatar (Google photo when available, else initials banner)
 // ==========================================
 
 function initialsFromName(name) {
@@ -104,7 +116,7 @@ function initialsFromName(name) {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-/** Local SVG avatar — no external request, immune to tracking blocks */
+/** Local SVG avatar — used when user has no profile photo */
 export function avatarDataUrl(name, opts = {}) {
     const bg = opts.bg || "#2563eb";
     const fg = opts.fg || "#ffffff";
@@ -119,6 +131,33 @@ export function avatarDataUrl(name, opts = {}) {
     return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
+/**
+ * Normalize Google / OAuth photo URLs so they load reliably in <img>.
+ * - Ensures https
+ * - Requests a sensible size for Google user-content URLs
+ */
+export function normalizePhotoURL(url) {
+    let u = String(url || "").trim();
+    if (!u) return "";
+    if (u.startsWith("//")) u = "https:" + u;
+    // Google profile photos often need an explicit size; avoid tiny defaults
+    try {
+        if (/googleusercontent\.com/i.test(u)) {
+            // Replace existing size suffix (=s96-c, =s64, etc.) or append one
+            if (/=s\d+/.test(u)) {
+                u = u.replace(/=s\d+(-c)?/i, "=s128-c");
+            } else if (!/[?&]sz=/.test(u)) {
+                u += (u.includes("?") ? "&" : "?") + "sz=128";
+            }
+        }
+    } catch (_) {}
+    return u;
+}
+
+/**
+ * Show Google/mail profile photo when present; otherwise initials banner.
+ * Sets referrerPolicy so Google photos are not blocked by Referer checks.
+ */
 export function setProfileAvatar(imgEl, { photoURL, name } = {}) {
     if (!imgEl) return;
     const fallback = avatarDataUrl(name || "User");
@@ -126,14 +165,22 @@ export function setProfileAvatar(imgEl, { photoURL, name } = {}) {
         imgEl.onerror = null;
         imgEl.src = fallback;
         imgEl.classList.add("avatar-fallback");
+        imgEl.removeAttribute("data-photo");
     };
     imgEl.classList.remove("avatar-fallback");
-    const url = (photoURL || "").trim();
+    try {
+        imgEl.referrerPolicy = "no-referrer";
+    } catch (_) {}
+    imgEl.decoding = "async";
+    imgEl.loading = "lazy";
+
+    const url = normalizePhotoURL(photoURL);
     if (!url) {
         applyFallback();
         return;
     }
     imgEl.onerror = applyFallback;
+    imgEl.setAttribute("data-photo", "1");
     imgEl.src = url;
 }
 
@@ -472,6 +519,14 @@ if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
         });
 
         initializeMapExport();
+        try { initializeRouteColors(); } catch (e) { console.warn(e); }
+        try { initializeSettingsColors(); } catch (e) { console.warn(e); }
+        try { initializePremiumJourneys(); } catch (e) { console.warn(e); }
+        document.getElementById("premiumBackFromSpectator")?.addEventListener("click", () => {
+            const back = document.getElementById("backToMyFootprint");
+            if (back) back.click();
+            else if (typeof window.switchView === "function") window.switchView("dashboard");
+        });
 
         initializeZonesPage();
         initializeStationsPage();
@@ -494,6 +549,7 @@ if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
         window.startAboutLiveSync = startAboutLiveSync;
         window.setProfileAvatar = setProfileAvatar;
         window.avatarDataUrl = avatarDataUrl;
+        window.normalizePhotoURL = normalizePhotoURL;
         window.updateAdminVisibility = updateAdminVisibility;
         window.renderZonesPage = renderZonesPage;
 
@@ -510,9 +566,15 @@ if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
 
         await graphReady;
 
-
-
-
+        // Graph is ready → Premium Priority (by category) can merge shared segments correctly.
+        // First paint may have fallen back to classic polylines; force priority redraw now.
+        try {
+            if (typeof window.redrawAllPremium === "function") {
+                window.redrawAllPremium();
+            }
+        } catch (e) {
+            console.warn("premium priority redraw after graph", e);
+        }
 
         // ==========================================
         // Search
@@ -688,11 +750,15 @@ if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
 
 
 
-                    // Prefer custom profile name from Firestore; keep Google photo
+                    // Prefer custom profile name from Firestore; photo from Google or stored profile
                     let shownName = user.displayName || "Rail Explorer";
+                    let photoURL = (user.photoURL || "").trim();
                     try {
                         const profile = await getUserProfile();
                         if (profile && profile.name) shownName = profile.name;
+                        if (!photoURL && profile && profile.photo) {
+                            photoURL = String(profile.photo || "").trim();
+                        }
                     } catch (_) {}
 
                     userName.textContent = shownName;
@@ -704,14 +770,9 @@ if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
                         window.loadProfileIntoSettings();
                     }
 
-
-
-
-
-
-
+                    // Google/mail photo when present → else initials banner
                     setProfileAvatar(profileImage, {
-                        photoURL: user.photoURL,
+                        photoURL,
                         name: shownName || user.displayName || "User"
                     });
 

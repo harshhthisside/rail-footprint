@@ -1,9 +1,11 @@
 // ==========================================
 // Rail Footprint
-// Routing Engine — optimized nearest-node
+// Routing Engine — optimized nearest-node + route cache
 // ==========================================
 
 import { shortestPath } from "./dijkstra.js";
+import { createLRU } from "./perf.js";
+import { loadGraphData } from "./dataCache.js";
 
 export let graphNodes = [];
 export let graphEdges = [];
@@ -13,6 +15,21 @@ const GRID_CELL = 0.05;
 let spatialGrid = null;
 const nearestCache = new Map();
 
+/** Resolves once loadGraph() finishes successfully — used by Premium priority init */
+let _graphReadyResolve = null;
+export const graphReadyPromise = new Promise((resolve) => {
+    _graphReadyResolve = resolve;
+});
+/** True after graph nodes + edges are loaded and spatial grid built */
+export function isGraphReady() {
+    return Array.isArray(graphNodes) && graphNodes.length > 0 &&
+        Array.isArray(graphEdges) && graphEdges.length > 0;
+}
+
+/** Cache full multi-stop route geometries keyed by station graph nodes / codes */
+const routeGeomCache = createLRU(256);
+/** Cache node-id paths for shared-segment / ribbon rendering */
+const routeNodeCache = createLRU(256);
 function cellKey(lat, lon) {
     return `${Math.floor(lat / GRID_CELL)},${Math.floor(lon / GRID_CELL)}`;
 }
@@ -40,29 +57,28 @@ export async function loadGraph() {
     console.log("Loading Routing Graph...");
     console.log("=================================");
 
-    // Parallel fetch — major load-time win on mobile networks
-    const [nodeResponse, edgeResponse] = await Promise.all([
-        fetch("assets/data/graph_nodes.json"),
-        fetch("assets/data/graph_edges.json")
-    ]);
-    if (!nodeResponse.ok) throw new Error("Unable to load graph_nodes.json");
-    if (!edgeResponse.ok) throw new Error("Unable to load graph_edges.json");
+    // Shared loader + IndexedDB cache (fast on repeat visits, single-flight)
+    const { nodes, edges, fromCache } = await loadGraphData();
+    graphNodes = nodes;
+    graphEdges = edges;
 
-    // Parse sequentially with a yield between to keep UI responsive
-    graphNodes = await nodeResponse.json();
+    // Yield so first paint / UI stays responsive after large parse
     await new Promise((r) => setTimeout(r, 0));
-    graphEdges = await edgeResponse.json();
-    await new Promise((r) => setTimeout(r, 0));
-
     buildSpatialGrid();
     nearestCache.clear();
 
-    console.log("✓ Nodes :", graphNodes.length);
+    console.log("✓ Nodes :", graphNodes.length, fromCache ? "(cache)" : "(network)");
     console.log("✓ Edges :", graphEdges.length);
     console.log("✓ Spatial grid cells:", spatialGrid.size);
     console.log("=================================");
     console.log("Routing Ready");
     console.log("=================================");
+
+    // Notify Premium (and any other waiters) that priority/corridor rendering can run
+    if (typeof _graphReadyResolve === "function") {
+        _graphReadyResolve();
+        _graphReadyResolve = null;
+    }
 }
 
 // ==========================================
@@ -143,18 +159,39 @@ function getGraphNode(station) {
 }
 
 // ==========================================
-// Calculate Route
+// Calculate Route (with geometry cache)
 // ==========================================
 
-export function calculateRoute(stations) {
-    if (stations.length < 2) return [];
+function routeCacheKey(stations) {
+    const parts = [];
+    for (let i = 0; i < stations.length; i++) {
+        const s = stations[i];
+        if (s.graph_node != null && Number.isFinite(Number(s.graph_node))) {
+            parts.push("n" + s.graph_node);
+        } else if (s.code) {
+            parts.push("c" + String(s.code).toUpperCase());
+        } else {
+            parts.push(
+                "p" +
+                    Number(s.lat).toFixed(4) +
+                    "," +
+                    Number(s.lon).toFixed(4)
+            );
+        }
+    }
+    return parts.join("|");
+}
 
-    let fullCoordinates = [];
-
+/**
+ * Internal: compute full node-id path across multi-stop stations.
+ * Returns [] on failure.
+ */
+function computeNodePath(stations) {
+    if (!stations || stations.length < 2) return [];
+    let fullNodes = [];
     for (let i = 0; i < stations.length - 1; i++) {
         const startNode = getGraphNode(stations[i]);
         const endNode = getGraphNode(stations[i + 1]);
-
         if (
             startNode < 0 ||
             endNode < 0 ||
@@ -163,22 +200,34 @@ export function calculateRoute(stations) {
         ) {
             return [];
         }
-
         const nodePath = shortestPath(startNode, endNode);
-
-        if (!nodePath || nodePath.length === 0) {
-            return [];
+        if (!nodePath || nodePath.length === 0) return [];
+        if (i > 0) {
+            for (let k = 1; k < nodePath.length; k++) fullNodes.push(nodePath[k]);
+        } else {
+            fullNodes.push(...nodePath);
         }
-
-        const coordinates = nodePath.map((id) => [
-            graphNodes[id][0],
-            graphNodes[id][1],
-        ]);
-
-        if (i > 0) coordinates.shift();
-
-        fullCoordinates.push(...coordinates);
     }
+    return fullNodes;
+}
+
+export function calculateRoute(stations) {
+    if (!stations || stations.length < 2) return [];
+
+    const key = routeCacheKey(stations);
+    const cached = routeGeomCache.get(key);
+    if (cached) return cached;
+
+    const nodePath = computeNodePath(stations);
+    if (!nodePath.length) return [];
+
+    // Also seed the node cache
+    routeNodeCache.set(key, nodePath.slice());
+
+    let fullCoordinates = nodePath.map((id) => [
+        graphNodes[id][0],
+        graphNodes[id][1],
+    ]);
 
     // Snap route ends to true station coordinates so markers & polylines
     // align with the actual station.
@@ -193,5 +242,31 @@ export function calculateRoute(stations) {
         ];
     }
 
+    // Cache a shallow copy so callers cannot mutate the cached array
+    if (fullCoordinates.length) {
+        routeGeomCache.set(key, fullCoordinates.slice());
+    }
+
     return fullCoordinates;
+}
+
+/**
+ * Return the graph node-id sequence for a multi-stop route.
+ * Used by Premium Shared Route Ribbon Rendering.
+ * Cached alongside geometry.
+ */
+export function calculateRouteNodes(stations) {
+    if (!stations || stations.length < 2) return [];
+    const key = routeCacheKey(stations);
+    const cached = routeNodeCache.get(key);
+    if (cached) return cached.slice();
+    const nodes = computeNodePath(stations);
+    if (nodes.length) routeNodeCache.set(key, nodes.slice());
+    return nodes;
+}
+
+/** Clear route geometry cache (e.g. after graph hot-reload). */
+export function clearRouteCache() {
+    routeGeomCache.clear();
+    routeNodeCache.clear();
 }

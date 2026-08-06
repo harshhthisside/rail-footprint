@@ -5,6 +5,7 @@
 
 import { showStation } from "./map.js";
 import { findNearestNode } from "./routing.js";
+import { loadStationIndex } from "./dataCache.js";
 
 let stations = [];
 
@@ -41,13 +42,8 @@ export async function initializeStationSearch() {
 
     console.log("Loading station index...");
 
-    const response = await fetch("assets/data/station_index.json");
-
-    if (!response.ok) {
-        throw new Error("Unable to load station_index.json");
-    }
-
-    stations = await response.json();
+    // Shared single-flight loader (shared with mapSearch / admin)
+    stations = await loadStationIndex();
 
     // Debug
     window.stations = stations;
@@ -155,61 +151,53 @@ function searchStations(query, container, input) {
 
     if (query.length < 2) return;
 
-    const results = stations
+    // Expand once (not per station)
+    const terms = expandSearchQuery(query);
+    const matched = [];
+    const seenCodes = new Set();
 
-        .filter(station => {
+    // Single pass: filter + prefer graph_node + early cap for sort pool
+    for (let i = 0; i < stations.length; i++) {
+        const station = stations[i];
+        const name = (station.name || "").toLowerCase();
+        const code = (station.code || "").toLowerCase();
+        let hit = false;
+        for (let t = 0; t < terms.length; t++) {
+            const term = terms[t];
+            if (name.includes(term) || code.includes(term)) {
+                hit = true;
+                break;
+            }
+        }
+        if (!hit) continue;
+        const codeKey = (station.code || "").toUpperCase();
+        if (codeKey && seenCodes.has(codeKey)) continue;
+        if (codeKey) seenCodes.add(codeKey);
+        matched.push(station);
+        // Soft cap before sort — still enough for ranking quality
+        if (matched.length >= 80) break;
+    }
 
-            const name = (station.name || "").toLowerCase();
-            const code = (station.code || "").toLowerCase();
-            const terms = expandSearchQuery(query);
+    matched.sort((a, b) => {
+        const an = (a.name || "").toLowerCase();
+        const bn = (b.name || "").toLowerCase();
+        const ac = (a.code || "").toLowerCase();
+        const bc = (b.code || "").toLowerCase();
+        const ag = a.graph_node != null ? 0 : 1;
+        const bg = b.graph_node != null ? 0 : 1;
+        if (ag !== bg) return ag - bg;
+        if (ac === query && bc !== query) return -1;
+        if (bc === query && ac !== query) return 1;
+        if (an === query && bn !== query) return -1;
+        if (bn === query && an !== query) return 1;
+        if (ac.startsWith(query) && !bc.startsWith(query)) return -1;
+        if (bc.startsWith(query) && !ac.startsWith(query)) return 1;
+        if (an.startsWith(query) && !bn.startsWith(query)) return -1;
+        if (bn.startsWith(query) && !an.startsWith(query)) return 1;
+        return an.length - bn.length;
+    });
 
-            return terms.some((term) => name.includes(term) || code.includes(term));
-
-        })
-
-        .sort((a, b) => {
-
-            const an = (a.name || "").toLowerCase();
-            const bn = (b.name || "").toLowerCase();
-
-            const ac = (a.code || "").toLowerCase();
-            const bc = (b.code || "").toLowerCase();
-
-            // Prefer entries that already have a graph_node (accurate snaps)
-            const ag = a.graph_node != null ? 0 : 1;
-            const bg = b.graph_node != null ? 0 : 1;
-            if (ag !== bg) return ag - bg;
-
-            // Exact code
-            if (ac === query && bc !== query) return -1;
-            if (bc === query && ac !== query) return 1;
-
-            // Exact name
-            if (an === query && bn !== query) return -1;
-            if (bn === query && an !== query) return 1;
-
-            // Code starts with query
-            if (ac.startsWith(query) && !bc.startsWith(query)) return -1;
-            if (bc.startsWith(query) && !ac.startsWith(query)) return 1;
-
-            // Name starts with query
-            if (an.startsWith(query) && !bn.startsWith(query)) return -1;
-            if (bn.startsWith(query) && !an.startsWith(query)) return 1;
-
-            // Shorter names first
-            return an.length - bn.length;
-
-        })
-
-        // Deduplicate by station code so wrong duplicate entries never surface
-        .filter((station, idx, arr) => {
-            const code = (station.code || "").toUpperCase();
-            if (!code) return true;
-            return arr.findIndex((s) => (s.code || "").toUpperCase() === code) === idx;
-        })
-
-        .slice(0, 10);
-
+    const results = matched.slice(0, 10);
     if (results.length === 0) {
 
         container.innerHTML = `

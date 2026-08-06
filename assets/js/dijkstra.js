@@ -12,7 +12,8 @@ let previousBuf = null;
 let visitedBuf = null;
 let bufSize = 0;
 const touched = []; // nodes we wrote to — only reset those
-
+// Reuse a single MinHeap instance (clear arrays each run)
+const sharedHeap = new MinHeap();
 function ensureBuffers(n) {
     if (bufSize >= n && distanceBuf) return;
     distanceBuf = new Float64Array(n);
@@ -46,13 +47,14 @@ export function shortestPath(startNode, endNode) {
     const distance = distanceBuf;
     const previous = previousBuf;
     const visited = visitedBuf;
-    const heap = new MinHeap();
+    const heap = sharedHeap;
+    heap.nodes.length = 0;
+    heap.prios.length = 0;
 
     distance[startNode] = 0;
     previous[startNode] = -1;
     touched.push(startNode);
     heap.push(startNode, 0);
-
     while (!heap.isEmpty()) {
         const current = heap.pop();
         const u = current.node;

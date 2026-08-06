@@ -66,6 +66,9 @@ function routeDistanceKm(coordinates) {
 }
 
 function getRouteColorByDistance(distanceKm) {
+    if (typeof window.__rfGetRouteColorByDistance === "function") {
+        return window.__rfGetRouteColorByDistance(distanceKm);
+    }
     for (const band of DISTANCE_COLOR_SCALE) {
         if (distanceKm <= band.max) return band.color;
     }
@@ -164,6 +167,12 @@ export function initializeMap(){
         {
 
             maxZoom:20,
+
+            // Smoother pan/zoom on mobile & low-end devices
+            updateWhenIdle: true,
+            updateWhenZooming: false,
+            keepBuffer: isMobile ? 1 : 2,
+            crossOrigin: true,
 
             attribution:
             "&copy; OpenStreetMap contributors &copy; CARTO"
@@ -618,19 +627,11 @@ export function drawJourney(
 
 
 
-    journeyLayers.set(
-
-        id,
-
-        {
-
-            main,
-
-            glow
-
-        }
-
-    );
+    journeyLayers.set(id, {
+        main,
+        glow,
+        distanceKm
+    });
 
 
 
@@ -660,209 +661,179 @@ export function drawJourney(
 // Draw All Journeys
 // ==========================================
 
-export function drawAllJourneys(journeys){
+let _drawAllScheduled = false;
+let _drawAllPending = null;
+/** Last journeys list drawn — used so color updates never wipe the map */
+let _lastDrawnJourneys = [];
+let _colorUpdateRaf = 0;
 
+/**
+ * Live color update: only setStyle on existing polylines.
+ * Does NOT remove layers, fitBounds, or recreate geometry — no lag, map stays interactive.
+ */
+export function updateRoutePolylineColors() {
+    if (!map || !journeyLayers.size) return;
+    if (_colorUpdateRaf) cancelAnimationFrame(_colorUpdateRaf);
+    _colorUpdateRaf = requestAnimationFrame(() => {
+        _colorUpdateRaf = 0;
+        journeyLayers.forEach((layer) => {
+            try {
+                const km = Number(layer.distanceKm) || 0;
+                const color = getRouteColorByDistance(km);
+                if (layer.main && typeof layer.main.setStyle === "function") {
+                    layer.main.setStyle({ color });
+                }
+                if (layer.glow && typeof layer.glow.setStyle === "function") {
+                    layer.glow.setStyle({ color });
+                }
+            } catch (_) {}
+        });
+    });
+}
 
+export function drawAllJourneys(journeys, opts = {}) {
+    // Calling with no args must NOT clear the map — re-use last list or no-op
+    if (journeys == null) {
+        if (_lastDrawnJourneys.length) {
+            journeys = _lastDrawnJourneys;
+        } else {
+            // Color-only request with layers already on map
+            updateRoutePolylineColors();
+            return;
+        }
+    }
+    if (!Array.isArray(journeys)) journeys = [];
+    _drawAllPending = { list: journeys, opts: opts || {} };
+    if (_drawAllScheduled) return;
+    _drawAllScheduled = true;
+    requestAnimationFrame(() => {
+        _drawAllScheduled = false;
+        const pending = _drawAllPending || { list: [], opts: {} };
+        _drawAllPending = null;
+        __drawAllJourneysImpl(pending.list, pending.opts);
+    });
+}
 
-    journeyLayers.forEach(layer=>{
+function __drawAllJourneysImpl(journeys, opts = {}) {
+    if (!map) return;
 
+    const skipFit = !!opts.skipFit;
+    const colorsOnly = !!opts.colorsOnly;
 
-        map.removeLayer(layer.main);
+    // Fast path: layers exist + same count → just recolor
+    if (colorsOnly || (journeyLayers.size > 0 && journeys === _lastDrawnJourneys)) {
+        updateRoutePolylineColors();
+        return;
+    }
 
-        map.removeLayer(layer.glow);
-
-
+    journeyLayers.forEach((layer) => {
+        try {
+            if (layer.main) map.removeLayer(layer.main);
+            if (layer.glow) map.removeLayer(layer.glow);
+        } catch (_) {}
     });
 
-
-
-    stationDots.forEach(dot=>{
-
-
-        map.removeLayer(dot.origin);
-
-        map.removeLayer(dot.destination);
-
-
+    stationDots.forEach((dot) => {
+        try {
+            if (dot.origin) map.removeLayer(dot.origin);
+            if (dot.destination) map.removeLayer(dot.destination);
+            if (Array.isArray(dot.intermediate)) {
+                dot.intermediate.forEach((m) => {
+                    try { if (m) map.removeLayer(m); } catch (_) {}
+                });
+            }
+        } catch (_) {}
     });
-
-
 
     journeyLayers.clear();
-
     stationDots.clear();
 
+    _lastDrawnJourneys = Array.isArray(journeys) ? journeys : [];
 
+    const bounds = [];
+    const list = _lastDrawnJourneys;
+    const n = list.length;
 
+    // Batch polyline creation to keep UI responsive on low-end devices
+    const BATCH = n > 40 ? 12 : n > 20 ? 20 : n;
 
-    const bounds=[];
-
-
-
-
-    journeys.forEach(
-
-        (journey,index)=>{
-
-
-            if(!journey.route?.length)
-
-                return;
-
-
-
+    function drawSlice(start) {
+        const end = Math.min(start + BATCH, n);
+        for (let i = start; i < end; i++) {
+            const journey = list[i];
+            if (!journey?.route?.length) continue;
 
             const distanceKm = routeDistanceKm(journey.route);
             const color = getRouteColorByDistance(distanceKm);
 
+            const glow = L.polyline(journey.route, {
+                color,
+                weight: 6,
+                opacity: 0.16,
+                lineCap: "round",
+                lineJoin: "round",
+                interactive: false
+            }).addTo(map);
 
+            const main = L.polyline(journey.route, {
+                color,
+                weight: 3.25,
+                opacity: 0.92,
+                lineCap: "round",
+                lineJoin: "round"
+            }).addTo(map);
 
-
-            const glow =
-
-            L.polyline(
-
-                journey.route,
-
-                {
-
-                    color,
-
-                    weight:6,
-
-                    opacity:0.16,
-
-                    lineCap:"round",
-
-                    lineJoin:"round",
-
-                    interactive:false
-
-                }
-
-            )
-
-            .addTo(map);
-
-
-
-
-
-            const main =
-
-            L.polyline(
-
-                journey.route,
-
-                {
-
-                    color,
-
-                    weight:3.25,
-
-                    opacity:0.92,
-
-                    lineCap:"round",
-
-                    lineJoin:"round"
-
-                }
-
-            )
-
-            .addTo(map);
-
-
-
-
-
-            journeyLayers.set(
-
-                journey.id,
-
-                {
-
-                    main,
-
-                    glow
-
-                }
-
-            );
-
-
-
-
+            journeyLayers.set(journey.id, {
+                main,
+                glow,
+                distanceKm
+            });
 
             addJourneyStations(
-
                 journey.id,
-
                 journey.route,
-
                 journey.from || "Origin",
-
                 journey.to || "Destination"
-
             );
 
-
-
-
-
-            bounds.push(
-
-                ...journey.route
-
-            );
-
-
+            for (let r = 0; r < journey.route.length; r++) {
+                bounds.push(journey.route[r]);
+            }
         }
 
-    );
+        if (end < n) {
+            requestAnimationFrame(() => drawSlice(end));
+            return;
+        }
 
+        // Finished all batches
+        if (!skipFit) {
+            if (bounds.length) {
+                const india = L.latLngBounds([7.5, 68.5], [35.5, 97.0]);
+                try {
+                    const routeBounds = L.latLngBounds(bounds);
+                    if (routeBounds.isValid()) india.extend(routeBounds);
+                } catch (_) {}
+                const mobile = window.innerWidth <= 768;
+                map.fitBounds(india, {
+                    padding: mobile ? [12, 12] : [18, 18],
+                    maxZoom: mobile ? 5.4 : 5.8,
+                    animate: !mobile
+                });
+            } else {
+                map.setView([22.0, 80.0], 5.2);
+            }
+        }
 
-
-
-
-
-    if(bounds.length){
-
-
-        // Fit so India + routes fill the map (same framing as production)
-        const india = L.latLngBounds([7.5, 68.5], [35.5, 97.0]);
-        try {
-            const routeBounds = L.latLngBounds(bounds);
-            if (routeBounds.isValid()) india.extend(routeBounds);
-        } catch (_) {}
-        const mobile = window.innerWidth <= 768;
-        map.fitBounds(india, {
-            padding: mobile ? [12, 12] : [18, 18],
-            maxZoom: mobile ? 5.4 : 5.8,
-            animate: !mobile
-        });
-
-
+        setTimeout(() => {
+            try {
+                if (map) map.invalidateSize(true);
+            } catch (_) {}
+        }, 80);
     }
 
-    else{
-
-
-        map.setView([22.0, 80.0], 5.2);
-
-
-    }
-
-    // Ensure map tiles + size are correct after drawing
-    setTimeout(() => {
-        if (map) map.invalidateSize(true);
-    }, 100);
-
+    drawSlice(0);
 }
-
-
-
-
 
 
 // ==========================================
@@ -1085,19 +1056,11 @@ export function drawUserFootprint(journeys){
 
 
 
-        journeyLayers.set(
-
-            journey.id,
-
-            {
-
-                main,
-
-                glow
-
-            }
-
-        );
+        journeyLayers.set(journey.id, {
+            main,
+            glow,
+            distanceKm
+        });
 
 
 
@@ -1465,4 +1428,10 @@ export function refreshPlannerMapSize() {
     if (plannerMap && typeof plannerMap.invalidateSize === "function") {
         plannerMap.invalidateSize(true);
     }
+}
+
+// Expose for live route color updates (settings + maps)
+if (typeof window !== "undefined") {
+    window.drawAllJourneys = drawAllJourneys;
+    window.updateRoutePolylineColors = updateRoutePolylineColors;
 }

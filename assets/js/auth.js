@@ -37,26 +37,33 @@ let currentUser = null;
 // ==========================================
 
 async function createUserProfile(user) {
-
     try {
         const userRef = doc(db, "users", user.uid);
         const snapshot = await getDoc(userRef);
+        const photo = (user.photoURL || "").trim();
 
         if (!snapshot.exists()) {
             await setDoc(userRef, {
                 name: user.displayName || "Rail Enthusiast",
                 email: user.email || "",
-                photo: user.photoURL || "",
+                photo: photo,
                 createdAt: Date.now()
             });
             console.log("User profile created");
         } else {
-            console.log("User profile already exists");
+            // Keep Explore avatars in sync: refresh Google/mail photo when available
+            const patch = {
+                email: user.email || snapshot.data()?.email || ""
+            };
+            if (photo) {
+                patch.photo = photo;
+            }
+            // Do not overwrite custom display name — only photo/email from provider
+            await setDoc(userRef, patch, { merge: true });
         }
     } catch (e) {
         console.warn("createUserProfile", e?.code || e?.message || e);
     }
-
 }
 
 // ==========================================
@@ -317,6 +324,13 @@ export function initializeAuth(callback = null) {
             if (typeof window.updateAdminVisibility === "function") {
                 try {
                     window.updateAdminVisibility(user);
+                } catch (_) {}
+            }
+
+            // Personal route/premium colors for this account (any signed-in user)
+            if (user && typeof window.__rfLoadUserColors === "function") {
+                try {
+                    window.__rfLoadUserColors();
                 } catch (_) {}
             }
 

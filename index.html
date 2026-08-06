@@ -6,18 +6,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5, viewport-fit=cover">
     <meta name="theme-color" content="#2563eb">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="description" content="Track Indian Railways journeys — stations, zones, distance, and memories on one map.">
     <title>Rail Footprint</title>
 
-    <!-- Leaflet -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-
-    <!-- Google Fonts -->
+    <!-- DNS / connection warm-up for tiles, CDN, Firebase -->
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://a.basemaps.cartocdn.com" crossorigin>
+    <link rel="preconnect" href="https://b.basemaps.cartocdn.com" crossorigin>
+    <link rel="preconnect" href="https://c.basemaps.cartocdn.com" crossorigin>
+    <link rel="preconnect" href="https://d.basemaps.cartocdn.com" crossorigin>
+    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://firebase.googleapis.com">
+    <link rel="dns-prefetch" href="https://identitytoolkit.googleapis.com">
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
 
-    <!-- Styles -->
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+    <!-- Google Fonts (display=swap; 3 weights = faster text paint) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Critical app styles -->
     <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/premium.css">
 </head>
 
 <body>
@@ -66,6 +80,10 @@
                 <span class="nav-icon">➕</span>
                 <span>Add Journey</span>
             </a>
+            <a href="#" class="nav-item" data-view="premium">
+                <span class="nav-icon">⭐</span>
+                <span>Premium Journey</span>
+            </a>
             <a href="#" class="nav-item" data-view="stations">
                 <span class="nav-icon">📍</span>
                 <span>Stations</span>
@@ -105,6 +123,7 @@
                      alt=""
                      width="42"
                      height="42"
+                     referrerpolicy="no-referrer"
                      decoding="async">
                 <div class="profile-info">
                     <h3 id="userName">Guest</h3>
@@ -688,8 +707,275 @@
                 </div>
             </section>
 
-            <!-- ========== SETTINGS VIEW ========== -->
-            <section id="view-settings" class="view">
+            <!-- ========== SETTINGS VIEW ========== -->            <!-- ========== PREMIUM JOURNEYS VIEW ========== -->
+            <section id="view-premium" class="view">
+                <div class="page-back-bar">
+                    <button type="button" class="page-back-btn" data-back-to="dashboard" id="premiumPageBackBtn">← Back to Dashboard</button>
+                </div>
+
+                <div id="premiumSpectatorBanner" class="premium-spectator-banner" style="display:none;">
+                    <span>👁 Viewing explorer’s Premium footprint (read-only)</span>
+                    <div class="premium-spectator-actions">
+                        <button type="button" id="premiumBackToUserDash" class="theme-toggle-btn">← Back to User Dashboard</button>
+                        <button type="button" id="premiumBackToExplore" class="theme-toggle-btn">← Back to Explore</button>
+                        <button type="button" id="premiumBackFromSpectator" class="theme-toggle-btn">← My Footprint</button>
+                    </div>
+                </div>
+
+                <div class="view-header premium-view-header">
+                    <div>
+                        <h2>⭐ Premium Journeys</h2>
+                        <p>Flagship trains — Rajdhani, Shatabdi, Vande Bharat, Duronto &amp; Tejas</p>
+                    </div>
+                    <button type="button" id="premiumExportBtn" class="premium-export-btn">⬇️ Export Premium</button>
+                </div>
+
+                <nav class="premium-subnav" aria-label="Premium sections">
+                    <button type="button" class="premium-subnav-btn active" data-premium-tab="dashboard">Dashboard</button>
+                    <button type="button" class="premium-subnav-btn" data-premium-tab="add">Add Journey</button>
+                    <button type="button" class="premium-subnav-btn" data-premium-tab="list">My Journeys</button>
+                </nav>
+
+                <!-- PANEL: Dashboard -->
+                <div id="premium-panel-dashboard" class="premium-panel active">
+
+                    <!-- Mirrors normal dashboard-grid: stats left, map right -->
+                    <div class="premium-dashboard-grid">
+
+                        <!-- LEFT: Stats column -->
+                        <div class="premium-stats-column">
+                            <div class="premium-stat-card large">
+                                <div class="pstat-top">
+                                    <div class="pstat-icon amber">⭐</div>
+                                    <div class="pstat-body">
+                                        <div class="value" id="premiumStatJourneys">0</div>
+                                        <div class="label">Premium Journeys</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="premium-stat-card large">
+                                <div class="pstat-top">
+                                    <div class="pstat-icon rose">📍</div>
+                                    <div class="pstat-body">
+                                        <div class="value" id="premiumStatStations">0</div>
+                                        <div class="label">Stations Visited</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="premium-stat-card large">
+                                <div class="pstat-top">
+                                    <div class="pstat-icon emerald">🛤</div>
+                                    <div class="pstat-body">
+                                        <div class="value" id="premiumStatDistance">0 km</div>
+                                        <div class="label">Distance Covered</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="premium-stat-card large longest">
+                                <div class="label">👑 Longest Premium Journey</div>
+                                <div class="value small" id="premiumStatLongest">—</div>
+                            </div>
+
+                            <div class="premium-nav-cards vertical owner-only" id="premiumOwnerNavCards">
+                                <button type="button" class="premium-nav-card" data-goto-premium="add" id="premiumNavAddBtn">
+                                    <span class="pnc-icon">➕</span>
+                                    <span class="pnc-title">Add Journey</span>
+                                    <span class="pnc-desc">Log a flagship train</span>
+                                </button>
+                                <button type="button" class="premium-nav-card" data-goto-premium="list" id="premiumNavListBtn">
+                                    <span class="pnc-icon">📋</span>
+                                    <span class="pnc-title">My Journeys</span>
+                                    <span class="pnc-desc">Search &amp; manage</span>
+                                </button>
+                                <button type="button" class="premium-nav-card" id="premiumNavExportCard">
+                                    <span class="pnc-icon">⬇️</span>
+                                    <span class="pnc-title">Export</span>
+                                    <span class="pnc-desc">Premium infographic</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- RIGHT: Map -->
+                        <div class="premium-map-column">
+                            <div class="glass-card premium-map-card">
+                                <div class="premium-map-toolbar">
+                                    <div>
+                                        <h3 class="premium-map-title" id="premiumMapTitle">Premium Journey Map</h3>
+                                        <span class="premium-map-hint" id="premiumMapOwnerHint">India focus · premium routes only</span>
+                                    </div>
+                                    <button type="button" id="premiumMapResetView" class="theme-toggle-btn pmc-reset">Reset view</button>
+                                </div>
+                                <div class="premium-map-controls">
+                                    <label class="pmc-item">Category
+                                        <select id="premiumMapCategoryFilter"><option value="">All categories</option></select>
+                                    </label>
+                                    <label class="pmc-item">Display
+                                        <select id="premiumMapRenderMode" title="Priority = one polyline coloured by highest-priority category on each segment · Normal = classic overlapping routes">
+                                            <option value="ribbon" selected>Priority (by category)</option>
+                                            <option value="normal">Normal (classic)</option>
+                                        </select>
+                                    </label>
+                                    <label class="pmc-item">Thickness
+                                        <select id="premiumMapLineThickness" title="Polyline thickness — stays applied until you change it">
+                                            <option value="thin">Thin</option>
+                                            <option value="normal" selected>Normal</option>
+                                        </select>
+                                    </label>
+                                    <label class="pmc-check"><input type="checkbox" id="premiumMapShowStationMarkers" checked> Station markers</label>
+                                    <label class="pmc-check"><input type="checkbox" id="premiumMapShowLabels"> Station labels</label>
+                                    <label class="pmc-check"><input type="checkbox" id="premiumMapShowRouteLabels"> Route labels</label>
+                                </div>
+                                <div id="premiumMap" class="premium-map" role="img" aria-label="Premium journeys map"></div>
+                                <div class="premium-map-foot">
+                                    <span>🚆 <strong id="premiumMapFootJourneys">0</strong> Journeys</span>
+                                    <span>📍 <strong id="premiumMapFootStations">0</strong> Stations</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BOTTOM: Quick overview (like normal dashboard) -->
+                    <div class="premium-quick-overview">
+                        <div class="pqo-head">
+                            <h3>Quick Overview</h3>
+                            <span class="premium-summary-chip" id="premiumSummaryChip">0 journeys</span>
+                        </div>
+                        <div class="premium-bottom-overview">
+                            <div class="premium-overview-card">
+                                <div class="pov-label">States Covered</div>
+                                <div class="pov-value" id="premiumStatStates">0 / 28</div>
+                            </div>
+                            <div class="premium-overview-card">
+                                <div class="pov-label">Zones Covered</div>
+                                <div class="pov-value" id="premiumStatZones">0 / 19</div>
+                            </div>
+                            <div class="premium-overview-card">
+                                <div class="pov-label">Network</div>
+                                <div class="pov-value" id="premiumStatNetwork">0%</div>
+                            </div>
+                            <div class="premium-overview-card">
+                                <div class="pov-label">Travel Time</div>
+                                <div class="pov-value" id="premiumStatTime">—</div>
+                            </div>
+                            <div class="premium-overview-card">
+                                <div class="pov-label">Top Category</div>
+                                <div class="pov-value small" id="premiumStatTopCategory">—</div>
+                            </div>
+                        </div>
+                        <div id="premiumCategoryBreakdown" class="premium-cat-breakdown"></div>
+                    </div>
+
+                    <!-- hidden titles used by JS spectator labels -->
+                    <span id="premiumDashTitle" hidden>Premium Summary</span>
+                    <span id="premiumDashSubtitle" hidden>Flagship trains across IR</span>
+                </div>
+
+                
+<!-- PANEL: Add (split form + live map) -->
+                <div id="premium-panel-add" class="premium-panel">
+                    <div class="premium-add-layout">
+                        <div class="premium-add-left">
+                            <div class="glass-card premium-form-card">
+                                <h3 class="premium-card-title" id="premiumFormTitle">Add Premium Journey</h3>
+                                <form id="premiumJourneyForm" autocomplete="off">
+                                    <label for="premiumCategory">Train Category</label>
+                                    <select id="premiumCategory" required></select>
+
+                                    <label for="premiumTrainName">Train Name</label>
+                                    <input id="premiumTrainName" type="text" placeholder="e.g. Mumbai Rajdhani">
+
+                                    <label for="premiumTrainNumber">Train Number</label>
+                                    <input id="premiumTrainNumber" type="text" placeholder="e.g. 12951">
+
+                                    <label for="premiumOrigin">Source Station</label>
+                                    <div class="station-input-wrap">
+                                        <input id="premiumOrigin" type="text" required placeholder="Search station" autocomplete="off">
+                                        <div class="suggestions"></div>
+                                    </div>
+
+                                    <div class="premium-intermediates-block">
+                                        <div class="premium-intermediates-head">
+                                            <span>Intermediate Stations</span>
+                                            <button type="button" id="addPremiumIntermediateBtn" class="premium-add-int-btn">+ Add stop</button>
+                                        </div>
+                                        <div id="premiumIntermediateContainer"></div>
+                                    </div>
+
+                                    <label for="premiumDestination">Destination Station</label>
+                                    <div class="station-input-wrap">
+                                        <input id="premiumDestination" type="text" required placeholder="Search station" autocomplete="off">
+                                        <div class="suggestions"></div>
+                                    </div>
+
+                                    <label for="premiumJourneyDate">Journey Date <span class="opt-hint">(optional)</span></label>
+                                    <input id="premiumJourneyDate" type="date">
+
+                                    <label for="premiumJourneyNotes">Notes <span class="opt-hint">(optional)</span></label>
+                                    <textarea id="premiumJourneyNotes" rows="2" placeholder="Cabin class, memories, coach…" maxlength="400"></textarea>
+
+                                    <label>Travel Time <span class="opt-hint">(optional)</span></label>
+                                    <div class="premium-time-row">
+                                        <input id="premiumHours" type="number" min="0" max="99" placeholder="Hours" inputmode="numeric">
+                                        <span>h</span>
+                                        <input id="premiumMinutes" type="number" min="0" max="59" placeholder="Minutes" inputmode="numeric">
+                                        <span>m</span>
+                                    </div>
+
+                                    <div class="premium-form-actions">
+                                        <button type="submit" class="premium-submit-btn" id="premiumSubmitBtn">Save Premium Journey</button>
+                                        <button type="button" class="theme-toggle-btn" id="premiumCancelEditBtn" style="display:none;">Cancel edit</button>
+                                    </div>
+                                    <p id="premiumFormStatus" class="premium-form-status"></p>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="premium-add-right">
+                            <div class="glass-card planner-map-card premium-planner-card">
+                                <div class="planner-map-header">
+                                    <h3>Route Preview</h3>
+                                    <span class="planner-map-hint">Select stations to preview</span>
+                                </div>
+                                <div id="premiumPlannerMap" class="premium-planner-map"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PANEL: My Journeys -->
+                <div id="premium-panel-list" class="premium-panel">
+                    <div class="glass-card">
+                        <div class="premium-list-head">
+                            <div>
+                                <h3 style="margin:0;">My Premium Journeys</h3>
+                                <p id="premiumListCount" class="premium-list-count">Showing 0 of 0</p>
+                            </div>
+                            <button type="button" id="clearAllPremiumBtn" class="theme-toggle-btn">Clear all</button>
+                        </div>
+
+                        <div class="premium-search-row">
+                            <input type="search" id="premiumSearchInput" placeholder="Search train, station, code…" autocomplete="off">
+                        </div>
+
+                        <div class="premium-filters">
+                            <select id="premiumFilterCategory"><option value="">All categories</option></select>
+                            <select id="premiumFilterYear"><option value="">All years</option></select>
+                            <select id="premiumFilterZone"><option value="">All zones</option></select>
+                            <select id="premiumFilterState"><option value="">All states</option></select>
+                            <input type="number" id="premiumFilterMinKm" placeholder="Min km" min="0">
+                            <input type="number" id="premiumFilterMaxKm" placeholder="Max km" min="0">
+                            <input type="text" id="premiumFilterTrainNumber" placeholder="Train no.">
+                            <button type="button" id="premiumFilterReset" class="theme-toggle-btn">Reset filters</button>
+                        </div>
+
+                        <div id="premiumJourneyList"></div>
+                        <div id="premiumLoadMoreWrap" class="premium-load-more-wrap" style="display:none;">
+                            <button type="button" id="premiumLoadMoreBtn" class="load-more-journeys">Show more</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+<section id="view-settings" class="view">
                 <div class="page-back-bar">
                     <button type="button" class="page-back-btn" data-back-to="dashboard">← Back to Dashboard</button>
                 </div>
@@ -754,12 +1040,36 @@
                         <select id="prefDefaultView" style="width:100%;max-width:320px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--background);color:var(--text);font-size:14px;">
                             <option value="dashboard">Dashboard</option>
                             <option value="journeys">My Journeys</option>
+                            <option value="premium">Premium Journeys</option>
                             <option value="add-journey">Add Journey</option>
                             <option value="stations">Stations</option>
                             <option value="analytics">Analytics</option>
                         </select>
                     </div>
                     <p id="prefsStatus" style="margin:10px 0 0;font-size:12px;color:var(--text-secondary);"></p>
+                </div>
+
+
+                <div class="glass-card" style="margin-bottom:24px;">
+                    <h3 style="margin:0 0 8px;">🎨 Route Colors</h3>
+                    <p style="color:var(--text-secondary);font-size:14px;margin:0 0 14px;">
+                        Customise distance-band colours for the map and export legend. Leave unchanged to keep the classic palette.
+                    </p>
+                    <div id="routeColorPickers"></div>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+                        <button type="button" id="saveRouteColorsBtn" class="theme-toggle-btn">Save colours</button>
+                        <button type="button" id="resetRouteColorsBtn" class="theme-toggle-btn">Reset defaults</button>
+                    </div>
+                    <p id="routeColorsStatus" style="margin:8px 0 0;font-size:12px;color:var(--text-secondary);"></p>
+                </div>
+
+                <div class="glass-card" style="margin-bottom:24px;">
+                    <h3 style="margin:0 0 8px;">⭐ Premium Train Colours</h3>
+                    <p style="color:var(--text-secondary);font-size:14px;margin:0 0 14px;">
+                        Colours for Rajdhani, Shatabdi, Vande Bharat, Duronto &amp; Tejas routes.
+                    </p>
+                    <div id="premiumColorPickers"></div>
+                    <button type="button" id="resetPremiumColorsBtn" class="theme-toggle-btn" style="margin-top:12px;">Reset premium defaults</button>
                 </div>
 
                 <div class="glass-card" style="margin-bottom:24px;">
@@ -794,11 +1104,11 @@
                 </div>
                 <div class="view-header">
                     <h2>🛡️ Admin Panel</h2>
-                    <p>Restricted tools for the app owner</p>
+                    <p>Restricted tools for the app owner · Session, data, map &amp; content controls</p>
                 </div>
                 <div class="admin-shell"><div class="admin-grid">
                     <div class="glass-card admin-card">
-                        <h3>Session</h3>
+                        <h3>👤 Session &amp; export</h3>
                         <p id="adminSessionInfo">Sign in as admin to use tools.</p>
                         <div class="admin-actions">
                             <button type="button" class="admin-btn" id="adminCopyUid">Copy my UID</button>
@@ -809,7 +1119,7 @@
                         </div>
                     </div>
                     <div class="glass-card admin-card">
-                        <h3>Map &amp; cache</h3>
+                        <h3>🗺️ Map &amp; cache</h3>
                         <p>Force map resize, clear layers, and local UI cache.</p>
                         <div class="admin-actions">
                             <button type="button" class="admin-btn" id="adminInvalidateMap">Invalidate map size</button>
@@ -820,7 +1130,7 @@
                         </div>
                     </div>
                     <div class="glass-card admin-card">
-                        <h3>Data tools</h3>
+                        <h3>🔧 Data tools</h3>
                         <p>Inspect footprint counts and recompute derived stats.</p>
                         <div class="admin-actions">
                             <button type="button" class="admin-btn" id="adminShowFootprintSummary">Footprint summary</button>
@@ -834,7 +1144,7 @@
                         </div>
                     </div>
                     <div class="glass-card admin-card">
-                        <h3>Quick navigation</h3>
+                        <h3>🧭 Quick navigation</h3>
                         <p>Jump to key screens without the sidebar.</p>
                         <div class="admin-actions admin-nav-actions">
                             <button type="button" class="admin-btn admin-nav" data-goto="dashboard">Dashboard</button>
@@ -849,14 +1159,14 @@
                         </div>
                     </div>
                     <div class="glass-card admin-card">
-                        <h3>Appearance</h3>
+                        <h3>🎨 Appearance</h3>
                         <p>Cycle themes from admin without leaving this page.</p>
                         <div class="admin-actions">
                             <button type="button" class="admin-btn" id="adminToggleTheme">Cycle light / dark / ocean</button>
                         </div>
                     </div>
                     <div class="glass-card admin-card admin-about-card">
-                        <h3>About page content</h3>
+                        <h3>📄 About page content</h3>
                         <p>Everything on the public About page is editable here and is <strong>published to all users</strong> via Firestore (<code>appConfig/about</code>). Stats always show the <strong>owner</strong> footprint. Hide/Show applies to every visitor’s sidebar.</p>
                         <p style="font-size:12px;color:var(--text-secondary);margin:8px 0 0;">One-time Firestore rule required — see README (public read, admin write on <code>appConfig</code>).</p>
                         <div class="admin-actions" style="margin-bottom:12px;flex-wrap:wrap;gap:8px;">
@@ -901,7 +1211,7 @@
                         </div>
                     </div>
                     <div class="glass-card admin-card danger-card">
-                        <h3>Danger zone</h3>
+                        <h3>⚠️ Danger zone</h3>
                         <p>These actions only affect <strong>your</strong> account data.</p>
                         <div class="admin-actions">
                             <button type="button" class="admin-btn admin-danger" id="adminDeleteAllJourneys">Delete all my journeys</button>
@@ -909,10 +1219,31 @@
                         </div>
                     </div>
                     <div class="glass-card admin-card">
-                        <h3>System</h3>
+                        <h3>ℹ️ System status</h3>
                         <ul class="admin-sys-list" id="adminSysList">
                             <li>Loading…</li>
                         </ul>
+                    </div>
+                </div>
+
+                <!-- Registered users (admin only) -->
+                <div class="glass-card admin-users-card" id="adminUsersSection" style="margin-top:18px;">
+                    <div class="admin-users-header">
+                        <div>
+                            <h3 style="margin:0 0 4px;">👥 Registered users</h3>
+                            <p id="adminUsersCount" style="margin:0;font-size:13px;color:var(--text-secondary);">Loading…</p>
+                        </div>
+                        <div class="admin-users-actions">
+                            <button type="button" class="admin-btn" id="adminUsersRefresh" style="width:auto;min-width:100px;">Refresh</button>
+                            <button type="button" class="admin-btn" id="adminUsersExportCsv" style="width:auto;min-width:100px;">Export CSV</button>
+                        </div>
+                    </div>
+                    <div class="admin-users-stats" id="adminUsersStats" style="display:none;"></div>
+                    <div class="admin-users-toolbar">
+                        <input type="search" id="adminUsersSearch" class="admin-users-search" placeholder="Search by name or email…" autocomplete="off">
+                    </div>
+                    <div id="adminUsersList" class="admin-users-list">
+                        <p class="admin-users-empty">Loading users…</p>
                     </div>
                 </div>
 
@@ -939,10 +1270,7 @@
 
 </div><!-- /app -->
 
-<!-- html2canvas + jsPDF for map export (PNG / PDF) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
+<!-- html2canvas + jsPDF load on-demand when user exports (dataCache.ensureExportLibs) -->
 <!-- Leaflet -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -1085,6 +1413,9 @@
         if (viewName === "settings" && typeof window.loadProfileIntoSettings === "function") {
             setTimeout(() => window.loadProfileIntoSettings(), 40);
         }
+        if (viewName === "admin" && typeof window.refreshAdminUsersList === "function") {
+            setTimeout(() => window.refreshAdminUsersList(), 40);
+        }
         if (viewName === "about") {
             const aboutHidden = typeof window.isAboutVisible === "function" && !window.isAboutVisible();
             const adminNav = document.getElementById("adminNavItem");
@@ -1096,6 +1427,27 @@
             if (typeof window.renderAboutPage === "function") {
                 setTimeout(() => window.renderAboutPage(), 20);
             }
+        }
+
+        // Premium map size when Premium view becomes visible
+        if (viewName === "premium") {
+            const fixPremiumView = () => {
+                try {
+                    if (window.premiumMap && typeof window.premiumMap.invalidateSize === "function") {
+                        window.premiumMap.invalidateSize(true);
+                    }
+                    // Always India overview on entering Premium (no corridor over-zoom)
+                    if (window.premiumMap && typeof window.premiumMap.setView === "function") {
+                        window.premiumMap.setView([22.0, 80.0], 4.8, { animate: false });
+                    }
+                    if (typeof window.redrawAllPremium === "function" && document.body.classList.contains("premium-spectator")) {
+                        window.redrawAllPremium();
+                    }
+                } catch (_) {}
+            };
+            setTimeout(fixPremiumView, 80);
+            setTimeout(fixPremiumView, 280);
+            setTimeout(fixPremiumView, 600);
         }
 
         // Admin only

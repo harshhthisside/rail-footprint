@@ -5,6 +5,7 @@
 
 import { loadJourneys } from "./firestore.js";
 import { showStation, focusJourney, zoomToStation } from "./map.js";
+import { loadStationIndex } from "./dataCache.js";
 
 let stations = [];
 let journeysCache = [];
@@ -16,9 +17,8 @@ const DEBOUNCE_MS = 160;
 
 export async function initializeMapSearch() {
     try {
-        const response = await fetch("assets/data/station_index.json");
-        if (!response.ok) throw new Error("station_index.json missing");
-        stations = await response.json();
+        // Shared single-flight station index (no second network download)
+        stations = await loadStationIndex();
     } catch (err) {
         console.error("Map search stations failed:", err);
         stations = [];
