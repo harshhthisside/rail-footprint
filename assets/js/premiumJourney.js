@@ -111,20 +111,54 @@ async function syncPremiumToCloud(journey) {
     return false;
 }
 
+/**
+ * Full premium sync for Explore:
+ * 1) Reconcile Firestore premiumJourneys with local list (upsert + delete orphans)
+ * 2) Publish premiumSummary (incl. zero-state) onto users/{uid}
+ * 3) Invalidate Explore / premium caches
+ * Call after every add / edit / delete / clear / import / restore.
+ */
+async function syncPremiumProfileToExplore(reason = "change") {
+    try {
+        const list = (typeof loadLocal === "function" ? loadLocal() : premiumJourneys) || [];
+        // getPremiumStats reads live premiumJourneys (already updated by CRUD callers)
+        const stats = typeof getPremiumStats === "function" ? getPremiumStats() : null;
+        const m = await import("./firestore.js");
+        if (typeof m.reconcilePremiumJourneysRemote === "function") {
+            await m.reconcilePremiumJourneysRemote(list);
+        } else {
+            for (const j of list) {
+                if (j && j.id) await syncPremiumToCloud(j);
+            }
+        }
+        if (typeof m.publishPremiumProfileSummary === "function") {
+            await m.publishPremiumProfileSummary(list, stats || undefined);
+        }
+        if (typeof m.invalidatePremiumCache === "function") {
+            try {
+                const { auth } = await import("./firebase.js");
+                m.invalidatePremiumCache(auth?.currentUser?.uid || null);
+            } catch (_) {
+                m.invalidatePremiumCache(null);
+            }
+        }
+        if (typeof m.invalidateUsersCache === "function") {
+            m.invalidateUsersCache();
+        }
+        console.log("[premium] explore sync complete:", reason, "journeys=", list.length);
+        return true;
+    } catch (e) {
+        console.warn("syncPremiumProfileToExplore", reason, e?.message || e);
+        return false;
+    }
+}
+
 /** Publish every local premium journey to Firestore (owner = signed-in uid) */
 export async function publishAllPremiumToCloud() {
-    const list = (typeof loadLocal === "function" ? loadLocal() : premiumJourneys) || [];
-    let ok = 0;
-    for (const j of list) {
-        if (!j) continue;
-        if (!j.id) j.id = `prem_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-        const saved = await syncPremiumToCloud(j);
-        if (saved) ok++;
-    }
-    console.log("[premium] published", ok, "/", list.length, "to cloud");
-    return ok;
+    return syncPremiumProfileToExplore("publishAll");
 }
 window.publishAllPremiumToCloud = publishAllPremiumToCloud;
+window.syncPremiumProfileToExplore = syncPremiumProfileToExplore;
 
 async function syncPremiumUpdateToCloud(id, journey) {
     try {
@@ -132,6 +166,7 @@ async function syncPremiumUpdateToCloud(id, journey) {
         if (typeof m.updatePremiumJourneyRemote === "function") {
             await m.updatePremiumJourneyRemote(id, journey);
         }
+        await syncPremiumProfileToExplore("update");
     } catch (e) {
         console.warn("premium cloud update", e?.message || e);
     }
@@ -143,6 +178,7 @@ async function syncPremiumDeleteToCloud(id) {
         if (typeof m.removePremiumJourneyRemote === "function") {
             await m.removePremiumJourneyRemote(id);
         }
+        await syncPremiumProfileToExplore("delete");
     } catch (e) {
         console.warn("premium cloud delete", e?.message || e);
     }
@@ -160,56 +196,48 @@ async function pullOwnPremiumFromCloud() {
     }
 }
 
-window.__rfLoadUserPremiumJourneys = async function (uid) {
+window.__rfLoadUserPremiumJourneys = async function (uid, opts) {
     if (!uid) return [];
+    const force = !!(opts && opts.force);
     let remote = [];
     try {
         const m = await import("./firestore.js");
         if (typeof m.loadUserPremiumJourneys === "function") {
-            remote = await m.loadUserPremiumJourneys(uid) || [];
+            remote = await m.loadUserPremiumJourneys(uid, { force }) || [];
         }
     } catch (e) {
         console.warn("__rfLoadUserPremiumJourneys", e);
         remote = [];
     }
 
-    // Same signed-in user: merge cloud + localStorage so Explore never shows empty
-    // when premium trips only exist on this device / failed to sync earlier.
+    // Same signed-in user: localStorage is the source of truth after local CRUD.
+    // Never re-introduce cloud-only rows that the user already deleted locally.
+    // Still push local-only rows so other devices / spectators see them.
     try {
         let myUid = null;
         try {
             const { auth } = await import("./firebase.js");
             myUid = auth?.currentUser?.uid || null;
         } catch (_) {}
-        let sameUser = myUid && String(myUid) === String(uid);
-        // Also treat as same user when Explore card email matches (handles stale user docs)
-        if (!sameUser && myUid) {
-            try {
-                const { auth } = await import("./firebase.js");
-                // uid path already compared; email handled in openUserPremiumFootprint
-            } catch (_) {}
-        }
+        const sameUser = myUid && String(myUid) === String(uid);
         if (sameUser) {
             const local = (typeof loadLocal === "function" ? loadLocal() : []) || [];
-            const byId = new Map();
-            for (const j of remote) {
-                if (j && (j.id || j.docId)) byId.set(String(j.id || j.docId), j);
-            }
-            for (const j of local) {
-                if (!j) continue;
-                const id = String(j.id || j.docId || "");
-                if (id && !byId.has(id)) byId.set(id, j);
-                else if (!id) byId.set(`local_${byId.size}`, j);
-            }
-            const merged = [...byId.values()].sort(
-                (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
+            const localIds = new Set(
+                local.map((j) => String(j?.id || j?.docId || "")).filter(Boolean)
             );
-            // Best-effort push any local-only rows to cloud for future spectators
-            merged.forEach((j) => {
-                if (j && j.id) {
-                    try { syncPremiumToCloud(j); } catch (_) {}
-                }
-            });
+            // Start from local (reflects deletes); only fill gaps if local is empty
+            // and cloud still has data (first login on a new device).
+            let merged;
+            if (local.length) {
+                merged = local.slice();
+            } else {
+                merged = Array.isArray(remote) ? remote.slice() : [];
+            }
+            merged.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            // Background reconcile so cloud matches local (drops deleted remote docs)
+            try {
+                syncPremiumProfileToExplore("exploreLoad");
+            } catch (_) {}
             return merged;
         }
     } catch (e) {
@@ -833,13 +861,27 @@ function collectRibbonRuns(journeys, edgeCats, edgeJourneys) {
             const catPart = (sig || "").split("\0\0")[0] || "";
             let cats = catPart.split("\0").filter(Boolean);
             const trains = sortTrainsByPriority([...trainMap.values()]);
+            // Categories present on the actual trains on this segment (source of truth for tooltips)
+            const trainCatSet = new Set();
+            for (const t of trains) {
+                if (t && t.category) trainCatSet.add(t.category);
+            }
+            let tooltipCategories = sortCatsByPriority(
+                trainCatSet.size ? [...trainCatSet] : cats.slice()
+            );
             // Collapse tiny multi-cat fragments (common at intermediate stations)
             // to primary-only visual so the spine colour stays continuous.
-            // Train list is preserved for tooltips.
+            // Tooltip categories stay full (from trains).
             if (cats.length > 1 && latlngs.length < MIN_MULTI_NODES) {
                 cats = [sortCatsByPriority(cats)[0]];
             }
-            runs.push({ latlngs, categories: cats, trains, signature: sig });
+            runs.push({
+                latlngs,
+                categories: cats,
+                tooltipCategories,
+                trains,
+                signature: sig
+            });
         };
 
         for (let i = 0; i < nodes.length - 1; i++) {
@@ -940,21 +982,63 @@ function sortCatsByPriority(cats) {
 }
 
 /**
+ * Build unique category list for a segment from its trains (preferred) or category metadata.
+ * Cached on the entry when journeys change — never hardcoded.
+ */
+function categoriesFromSegmentTrains(trains, fallbackCats, primaryCat) {
+    const set = new Set();
+    if (Array.isArray(trains)) {
+        for (let i = 0; i < trains.length; i++) {
+            const c = trains[i] && trains[i].category;
+            if (c) set.add(c);
+        }
+    }
+    if (!set.size && Array.isArray(fallbackCats)) {
+        for (let i = 0; i < fallbackCats.length; i++) {
+            if (fallbackCats[i]) set.add(fallbackCats[i]);
+        }
+    }
+    if (!set.size && primaryCat) set.add(primaryCat);
+    return sortCatsByPriority([...set]);
+}
+
+/**
  * Build rich HTML tooltip listing every train on this corridor segment.
+ * Header shows ALL unique categories on the segment (e.g. "Rajdhani • Duronto"),
+ * with a badge that matches the actual unique category count.
  * Rows: [category colour square] train number · train name — sorted by priority.
  */
 function ribbonTooltipHtml(cat, allCats, trains) {
-    const orderedCats = sortCatsByPriority(allCats && allCats.length ? allCats : [cat]);
+    const orderedCats = categoriesFromSegmentTrains(trains, allCats, cat);
     const primary = orderedCats[0] || cat;
-    const primaryColor = getPremiumColor(primary);
     const trainList = sortTrainsByPriority(trains || []);
     const isShared = orderedCats.length > 1;
+    // Dynamic multi-category header: each category gets its own color indicator
+    // e.g. [🟥] Rajdhani • [🟩] Duronto  — colors from getPremiumColor (live config)
+    const headerParts = orderedCats.length
+        ? orderedCats.map((c) => {
+              const short = ribbonCatShort(c);
+              if (!short) return "";
+              const color = getPremiumColor(c);
+              return (
+                  `<span class="rf-ribbon-cat-item">` +
+                  `<span class="rf-ribbon-swatch" style="background:${color}"></span>` +
+                  `<span class="rf-ribbon-cat-name">${escapeHtml(short)}</span>` +
+                  `</span>`
+              );
+          }).filter(Boolean)
+        : [
+              `<span class="rf-ribbon-cat-item">` +
+              `<span class="rf-ribbon-swatch" style="background:${getPremiumColor(primary)}"></span>` +
+              `<span class="rf-ribbon-cat-name">${escapeHtml(ribbonCatShort(primary))}</span>` +
+              `</span>`
+          ];
+    const headerHtml = headerParts.join(`<span class="rf-ribbon-cat-sep">•</span>`);
 
     let html =
         `<div class="rf-ribbon-tip">` +
         `<div class="rf-ribbon-tip-row">` +
-        `<span class="rf-ribbon-swatch" style="background:${primaryColor}"></span>` +
-        `<strong>${escapeHtml(ribbonCatShort(primary))}</strong>` +
+        `<strong class="rf-ribbon-tip-cats">${headerHtml}</strong>` +
         (isShared
             ? `<span class="rf-ribbon-tip-badge">${orderedCats.length} categories</span>`
             : "") +
@@ -1132,8 +1216,11 @@ function bindRibbonInteraction(entry) {
     const cat = entry.category;
     const allCats = entry.allCats || [cat];
     const trains = entry.trains || [];
+    // Use precomputed tooltip HTML (categories derived from segment trains)
+    const tipHtml =
+        entry._tooltipHtml || ribbonTooltipHtml(cat, allCats, trains);
 
-    target.bindTooltip(ribbonTooltipHtml(cat, allCats, trains), {
+    target.bindTooltip(tipHtml, {
         sticky: true,
         direction: "bottom",
         opacity: 0.96,
@@ -1344,11 +1431,16 @@ function drawRibbonRun(run, runIndex) {
     hit.addTo(premiumGroup);
     ribbons.push(glow, main, hit);
 
-    const allCats = cats.slice();
+    // Tooltip categories = unique train categories on this segment (cached until journeys change)
+    const tooltipCats =
+        (run.tooltipCategories && run.tooltipCategories.length
+            ? sortCatsByPriority(run.tooltipCategories)
+            : categoriesFromSegmentTrains(trains, cats, primary));
+    const allCats = tooltipCats.slice();
     const entry = {
         runIndex,
         catIndex: 0,
-        isMulti: cats.length > 1,
+        isMulti: allCats.length > 1,
         isPrimary: true,
         category: primary,
         allCats,
@@ -1360,8 +1452,11 @@ function drawRibbonRun(run, runIndex) {
         _hlMw: null,
         _hlMo: null,
         _hlGw: null,
-        _hlGo: null
+        _hlGo: null,
+        // Cached tooltip HTML rebuilt only when this entry is created (journey data change)
+        _tooltipHtml: null
     };
+    entry._tooltipHtml = ribbonTooltipHtml(primary, allCats, trains);
     _ribbonLayerEntries.push(entry);
     bindRibbonInteraction(entry);
 
@@ -1982,7 +2077,7 @@ export function getPremiumStats() {
         topCategory,
         longestLabel: longest
             ? `${longest.origin?.name || "?"} → ${longest.destination?.name || "?"} (${Math.round(longest.distanceKm || 0)} km)`
-            : "—",
+            : "None",
         statesList: [...stateSet],
         zonesList: [...zoneSet]
     };
@@ -2163,8 +2258,8 @@ export async function addPremiumJourney(payload) {
     saveLocal();
     visibleCount = PAGE_SIZE;
     redrawAllPremium();
-    // Fire-and-forget cloud sync for explore spectators
-    syncPremiumToCloud(journey);
+    // Full explore sync (journey doc + public profile summary)
+    syncPremiumProfileToExplore("add");
     return journey;
 }
 
@@ -2253,7 +2348,10 @@ export function removePremiumJourney(id) {
     if (readOnly) return;
     premiumJourneys = premiumJourneys.filter((j) => j.id !== id);
     saveLocal();
+    // Recalculate stats immediately (incl. zero-journey state)
+    try { getPremiumStats(); } catch (_) {}
     redrawAllPremium();
+    // Delete remote + full explore profile reconcile (zeros when empty)
     syncPremiumDeleteToCloud(id);
 }
 
@@ -2264,6 +2362,7 @@ export async function clearAllPremiumJourneys() {
     premiumJourneys = [];
     saveLocal();
     visibleCount = PAGE_SIZE;
+    try { getPremiumStats(); } catch (_) {}
     redrawAllPremium();
     try {
         const m = await import("./firestore.js");
@@ -2273,6 +2372,8 @@ export async function clearAllPremiumJourneys() {
     } catch (e) {
         console.warn("clear premium remote", e);
     }
+    // Write zero-state public profile so Explore never shows stale premium data
+    await syncPremiumProfileToExplore("clearAll");
 }
 
 // ---------- Intermediates ----------
@@ -2857,10 +2958,14 @@ function bindPremiumForm() {
             renderPremiumList();
         });
         if (isNum) {
+            let ft = null;
             el.addEventListener("input", () => {
-                filters[key] = el.value;
-                visibleCount = PAGE_SIZE;
-                renderPremiumList();
+                clearTimeout(ft);
+                ft = setTimeout(() => {
+                    filters[key] = el.value;
+                    visibleCount = PAGE_SIZE;
+                    renderPremiumList();
+                }, 150);
             });
         }
     };

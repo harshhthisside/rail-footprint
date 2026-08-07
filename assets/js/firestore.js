@@ -725,6 +725,18 @@ export function subscribePublicRouteColors(onData, onError) {
 
 const premiumJourneysRef = collection(db, "premiumJourneys");
 
+/** Short-lived cache for spectator / Explore premium loads */
+const _premiumByOwnerCache = new Map(); // uid → { at, data }
+const PREMIUM_CACHE_TTL = 8_000;
+
+export function invalidatePremiumCache(uid) {
+    if (uid) {
+        _premiumByOwnerCache.delete(String(uid));
+    } else {
+        _premiumByOwnerCache.clear();
+    }
+}
+
 /** Remove undefined / NaN / functions — Firestore rejects these (invalid-argument) */
 function stripUndefined(value) {
     if (value === undefined || typeof value === "function") return undefined;
@@ -855,6 +867,7 @@ export async function savePremiumJourneyRemote(journey) {
     try {
         const ref = doc(db, "premiumJourneys", docId);
         await setDoc(ref, payload, { merge: true });
+        invalidatePremiumCache(uid);
         console.log("[premium sync] saved", docId, "owner", uid, "coords", (payload.coordinates || []).length);
         return docId;
     } catch (e) {
@@ -874,7 +887,8 @@ export async function savePremiumJourneyRemote(journey) {
 
 export async function updatePremiumJourneyRemote(id, journey) {
     if (!auth.currentUser || !id) return;
-    const ref = doc(db, "premiumJourneys", String(id));
+    const docId = safeDocId(id);
+    const ref = doc(db, "premiumJourneys", docId);
     await setDoc(
         ref,
         {
@@ -884,35 +898,143 @@ export async function updatePremiumJourneyRemote(id, journey) {
         },
         { merge: true }
     );
+    invalidatePremiumCache(auth.currentUser.uid);
 }
 
 export async function removePremiumJourneyRemote(id) {
     if (!auth.currentUser || !id) return;
-    const ref = doc(db, "premiumJourneys", String(id));
-    try {
-        const snap = await getDoc(ref);
-        if (!snap.exists()) return;
-        if (snap.data().owner !== auth.currentUser.uid) {
-            throw new Error("Permission denied.");
+    const uid = auth.currentUser.uid;
+    const candidates = new Set([String(id), safeDocId(id)]);
+    for (const docId of candidates) {
+        try {
+            const ref = doc(db, "premiumJourneys", docId);
+            const snap = await getDoc(ref);
+            if (!snap.exists()) continue;
+            if (snap.data().owner !== uid) {
+                throw new Error("Permission denied.");
+            }
+            await deleteDoc(ref);
+        } catch (e) {
+            console.warn("removePremiumJourneyRemote", docId, e?.code || e?.message || e);
         }
-        await deleteDoc(ref);
-    } catch (e) {
-        console.warn("removePremiumJourneyRemote", e?.code || e?.message || e);
     }
+    invalidatePremiumCache(uid);
 }
 
 export async function deleteAllPremiumJourneysRemote() {
     if (!auth.currentUser) return 0;
+    const uid = auth.currentUser.uid;
     const q = query(
         premiumJourneysRef,
-        where("owner", "==", auth.currentUser.uid)
+        where("owner", "==", uid)
     );
     const snap = await getDocs(q);
-    if (snap.empty) return 0;
-    const batch = writeBatch(db);
-    snap.forEach((d) => batch.delete(d.ref));
-    await batch.commit();
-    return snap.size;
+    if (snap.empty) {
+        invalidatePremiumCache(uid);
+        return 0;
+    }
+    // Batch in chunks of 400 (Firestore limit 500)
+    const docs = snap.docs;
+    for (let i = 0; i < docs.length; i += 400) {
+        const batch = writeBatch(db);
+        docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+        await batch.commit();
+    }
+    invalidatePremiumCache(uid);
+    return docs.length;
+}
+
+/**
+ * Full reconcile: make cloud premiumJourneys match the local list exactly.
+ * - Upserts every local journey
+ * - Deletes every remote doc for this owner that is not in the local list
+ * Used after add / edit / delete / clear so Explore never shows stale trips.
+ * @param {Array} localList
+ * @returns {Promise<{upserted:number, deleted:number}>}
+ */
+export async function reconcilePremiumJourneysRemote(localList) {
+    if (!auth.currentUser) return { upserted: 0, deleted: 0 };
+    const uid = auth.currentUser.uid;
+    const list = Array.isArray(localList) ? localList.filter(Boolean) : [];
+    const localIds = new Set(
+        list.map((j) => safeDocId(j.id || j.docId)).filter(Boolean)
+    );
+
+    let deleted = 0;
+    try {
+        const q = query(premiumJourneysRef, where("owner", "==", uid));
+        const snap = await getDocs(q);
+        const toDelete = snap.docs.filter((d) => !localIds.has(d.id));
+        for (let i = 0; i < toDelete.length; i += 400) {
+            const batch = writeBatch(db);
+            toDelete.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+            await batch.commit();
+            deleted += Math.min(400, toDelete.length - i);
+        }
+    } catch (e) {
+        console.warn("reconcilePremium delete phase", e?.code || e?.message || e);
+    }
+
+    let upserted = 0;
+    for (const j of list) {
+        try {
+            await savePremiumJourneyRemote(j);
+            upserted++;
+        } catch (e) {
+            console.warn("reconcilePremium upsert", j?.id, e?.message || e);
+        }
+    }
+
+    invalidatePremiumCache(uid);
+    return { upserted, deleted };
+}
+
+/**
+ * Write compact premium summary onto users/{uid} for Explore cards / profile.
+ * Always writes zeros when the list is empty so stale stats cannot linger.
+ * @param {Array} localList
+ * @param {object} [stats] optional precomputed stats
+ */
+export async function publishPremiumProfileSummary(localList, stats) {
+    if (!auth.currentUser) return null;
+    const uid = auth.currentUser.uid;
+    const list = Array.isArray(localList) ? localList : [];
+    const s = stats || {};
+    const journeys = Number.isFinite(s.journeys) ? s.journeys : list.length;
+    const stations = Number.isFinite(s.stations) ? s.stations : 0;
+    const distance = Number.isFinite(s.distance) ? s.distance : 0;
+    const longestLabel =
+        journeys === 0
+            ? "None"
+            : s.longestLabel != null
+              ? String(s.longestLabel)
+              : "—";
+    const body = {
+        premiumSummary: {
+            journeys,
+            stations,
+            distance,
+            distanceLabel:
+                journeys === 0
+                    ? "0 km"
+                    : s.distanceLabel || `${distance.toLocaleString()} km`,
+            longestLabel,
+            topCategory: journeys === 0 ? "—" : s.topCategory || "—",
+            updatedAt: Date.now()
+        },
+        premiumJourneyCount: journeys,
+        premiumUpdatedAt: Date.now()
+    };
+    try {
+        const userRef = doc(db, "users", uid);
+        await setDoc(userRef, body, { merge: true });
+        invalidateUsersCache();
+        invalidatePremiumCache(uid);
+        return body.premiumSummary;
+    } catch (e) {
+        console.warn("publishPremiumProfileSummary", e?.code || e?.message || e);
+        return null;
+    }
 }
 
 /** Load current signed-in user's premium journeys from cloud */
@@ -946,12 +1068,21 @@ export async function loadPremiumJourneysRemote() {
 }
 
 /** Load another user's premium journeys (spectator / explore) */
-export async function loadUserPremiumJourneys(uid) {
+export async function loadUserPremiumJourneys(uid, opts = {}) {
     if (!uid) return [];
+    const key = String(uid);
+    const skipCache = !!(opts && opts.force);
+    const now = Date.now();
+    if (!skipCache) {
+        const hit = _premiumByOwnerCache.get(key);
+        if (hit && now - hit.at < PREMIUM_CACHE_TTL && Array.isArray(hit.data)) {
+            return hit.data;
+        }
+    }
     try {
         const q = query(
             premiumJourneysRef,
-            where("owner", "==", String(uid))
+            where("owner", "==", key)
         );
         const snap = await getDocs(q);
         const list = snap.docs
@@ -960,6 +1091,7 @@ export async function loadUserPremiumJourneys(uid) {
                 return { ...data, id: d.id || data.id };
             })
             .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        _premiumByOwnerCache.set(key, { at: now, data: list });
         console.log("[premiumJourneys] owner=", uid, "docs=", list.length);
         return list;
     } catch (e) {

@@ -1659,6 +1659,37 @@ body.premium-spectator #clearAllPremiumBtn {
   align-items: center;
   gap: 8px;
   margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+.rf-ribbon-tip-row strong,
+.rf-ribbon-tip-cats {
+  flex: 1 1 auto;
+  min-width: 0;
+  line-height: 1.3;
+  word-break: break-word;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 0;
+  font-weight: 700;
+}
+
+.rf-ribbon-cat-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.rf-ribbon-cat-sep {
+  margin: 0 5px;
+  color: #94a3b8;
+  font-weight: 600;
+  user-select: none;
+}
+
+.rf-ribbon-cat-name {
+  font-weight: 700;
 }
 
 .rf-ribbon-swatch {

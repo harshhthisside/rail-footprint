@@ -275,7 +275,7 @@ async function openUserPremiumFootprint(user) {
         let premiumList = [];
         try {
             if (typeof window.__rfLoadUserPremiumJourneys === "function") {
-                premiumList = await window.__rfLoadUserPremiumJourneys(targetUid) || [];
+                premiumList = await window.__rfLoadUserPremiumJourneys(targetUid, { force: true }) || [];
             }
             if ((!premiumList || !premiumList.length) && Array.isArray(user.premiumJourneys)) {
                 premiumList = user.premiumJourneys;
@@ -454,7 +454,7 @@ async function openUserFootprint(user) {
             const uid = user.uid || user.id;
             let premiumList = [];
             if (typeof window.__rfLoadUserPremiumJourneys === "function") {
-                premiumList = await window.__rfLoadUserPremiumJourneys(uid) || [];
+                premiumList = await window.__rfLoadUserPremiumJourneys(uid, { force: true }) || [];
             } else if (Array.isArray(user.premiumJourneys)) {
                 premiumList = user.premiumJourneys;
             }
