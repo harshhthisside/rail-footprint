@@ -21,6 +21,8 @@ import {
     refreshPlannerMapSize
 } from "./map.js";
 
+import { debounce } from "./perf.js";
+
 
 import {
     initializeStationSearch
@@ -998,22 +1000,15 @@ if (deleteAccountBtn && deleteAccountBtn.dataset.bound !== "1") {
         // ==========================================
 
 
-        window.addEventListener(
-            "resize",
-            ()=>{
-
-
-                refreshMap();
-
-
-
-                if(window.innerWidth>768)
-                    closeSidebar();
-
-
-
-            }
-        );
+        // Debounced resize keeps invalidateSize cheap during window drag / device rotation
+        const onResize = debounce(() => {
+            refreshMap();
+            try {
+                if (typeof refreshPlannerMapSize === "function") refreshPlannerMapSize();
+            } catch (_) {}
+            if (window.innerWidth > 768) closeSidebar();
+        }, 120);
+        window.addEventListener("resize", onResize, { passive: true });
 
 
 

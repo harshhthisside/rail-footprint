@@ -25,6 +25,13 @@
 
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <!-- Early fetch of critical JS (module graph still resolved by browser) -->
+    <link rel="modulepreload" href="assets/js/app.js">
+    <link rel="modulepreload" href="assets/js/map.js">
+    <link rel="modulepreload" href="assets/js/routing.js">
+    <link rel="modulepreload" href="assets/js/premiumJourney.js">
+    <link rel="modulepreload" href="assets/js/perf.js">
+    <link rel="preload" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" as="script">
 
     <!-- Google Fonts (display=swap; 3 weights = faster text paint) -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">

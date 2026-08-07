@@ -1618,7 +1618,7 @@ body.premium-spectator #clearAllPremiumBtn {
   color: var(--text-primary, #0f172a);
 }
 
-/* Leaflet tooltip for ribbons */
+/* Leaflet tooltip for ribbons — GPU layer for sticky follow without layout thrash */
 .leaflet-tooltip.rf-ribbon-tooltip {
   background: rgba(15, 23, 42, 0.94);
   color: #f8fafc;
@@ -1627,10 +1627,25 @@ body.premium-spectator #clearAllPremiumBtn {
   padding: 0;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
   font-size: 0.8rem;
+  will-change: transform;
+  contain: layout style;
+  pointer-events: none;
 }
 
 .leaflet-tooltip.rf-ribbon-tooltip::before {
   border-top-color: rgba(15, 23, 42, 0.94);
+}
+
+/* Arrow points up when tooltip is below the cursor (direction: bottom) */
+.leaflet-tooltip-bottom.rf-ribbon-tooltip::before {
+  border-bottom-color: rgba(15, 23, 42, 0.94);
+  border-top-color: transparent;
+}
+
+/* Arrow points down when tooltip is above the cursor (direction: top) */
+.leaflet-tooltip-top.rf-ribbon-tooltip::before {
+  border-top-color: rgba(15, 23, 42, 0.94);
+  border-bottom-color: transparent;
 }
 
 .rf-ribbon-tip {

@@ -24,6 +24,7 @@ import {
     resolveZoneCode
 } from "./statistics.js";
 import { ensureExportLibs } from "./dataCache.js";
+import { throttle } from "./perf.js";
 
 /**
  * Fixed priority order for shared-corridor rendering — never change dynamically (prevents flicker).
@@ -460,36 +461,33 @@ function initPremiumPlannerMap() {
 
 function clearPremiumMapLayers() {
     if (!premiumGroup) return;
-    premiumLayers.forEach((layer) => {
-        try {
-            if (layer.glow) premiumGroup.removeLayer(layer.glow);
-        } catch (_) {}
-        try {
-            if (layer.main) premiumGroup.removeLayer(layer.main);
-        } catch (_) {}
-        try {
-            if (Array.isArray(layer.ribbons)) {
-                layer.ribbons.forEach((r) => {
-                    try { premiumGroup.removeLayer(r); } catch (_) {}
-                });
-            }
-        } catch (_) {}
-    });
-    premiumLayers.clear();
-    premiumDots.forEach((m) => {
-        try { premiumGroup.removeLayer(m); } catch (_) {}
-    });
-    premiumDots.clear();
-    if (labelGroup) labelGroup.clearLayers();
-    // Remove any orphan ribbon layers stored under synthetic keys
-    if (premiumGroup) {
-        try {
-            premiumGroup.eachLayer((lyr) => {
-                if (lyr && lyr._rfRibbon) {
-                    try { premiumGroup.removeLayer(lyr); } catch (_) {}
+    // Bulk clear is far cheaper than per-layer remove for large corridor sets
+    try {
+        premiumGroup.clearLayers();
+    } catch (_) {
+        premiumLayers.forEach((layer) => {
+            try {
+                if (layer.glow) premiumGroup.removeLayer(layer.glow);
+            } catch (_) {}
+            try {
+                if (layer.main) premiumGroup.removeLayer(layer.main);
+            } catch (_) {}
+            try {
+                if (Array.isArray(layer.ribbons)) {
+                    layer.ribbons.forEach((r) => {
+                        try { premiumGroup.removeLayer(r); } catch (_) {}
+                    });
                 }
-            });
-        } catch (_) {}
+            } catch (_) {}
+        });
+        premiumDots.forEach((m) => {
+            try { premiumGroup.removeLayer(m); } catch (_) {}
+        });
+    }
+    premiumLayers.clear();
+    premiumDots.clear();
+    if (labelGroup) {
+        try { labelGroup.clearLayers(); } catch (_) {}
     }
     // Adaptive ribbon cache — layers already removed above; clear refs
     _cachedRibbonRuns = [];
@@ -497,7 +495,8 @@ function clearPremiumMapLayers() {
     _lastRibbonZoom = null;
     _ribbonHoverCat = null;
     _ribbonFocusCat = null;
-    clearPreview();
+    _mapRectCache.rect = null;
+    previewLayer = null;
 }
 
 function clearPreview() {
@@ -830,7 +829,9 @@ function collectRibbonRuns(journeys, edgeCats, edgeJourneys) {
             }
             if (latlngs.length < 2) return;
 
-            let cats = sig.split("\0").filter(Boolean);
+            // sig may contain "\0\0" + train ids after the category list
+            const catPart = (sig || "").split("\0\0")[0] || "";
+            let cats = catPart.split("\0").filter(Boolean);
             const trains = sortTrainsByPriority([...trainMap.values()]);
             // Collapse tiny multi-cat fragments (common at intermediate stations)
             // to primary-only visual so the spine colour stays continuous.
@@ -844,7 +845,8 @@ function collectRibbonRuns(journeys, edgeCats, edgeJourneys) {
         for (let i = 0; i < nodes.length - 1; i++) {
             const key = edgeKey(nodes[i], nodes[i + 1]);
             const set = edgeCats.get(key);
-            // Signature: categories sorted by fixed RIBBON_ORDER
+            // Signature: categories + exact train set so each rendered segment
+            // only lists trains that actually traverse every edge in the run.
             let sig = "";
             if (set && set.size) {
                 const ordered = RIBBON_ORDER.filter((c) => set.has(c));
@@ -853,6 +855,11 @@ function collectRibbonRuns(journeys, edgeCats, edgeJourneys) {
                     if (!RIBBON_ORDER.includes(c)) ordered.push(c);
                 }
                 sig = ordered.join("\0");
+                const jm = edgeJourneys && edgeJourneys.get(key);
+                if (jm && jm.size) {
+                    const jids = [...jm.keys()].sort();
+                    sig += "\0\0" + jids.join("\0");
+                }
             }
             if (prevSig === null) {
                 prevSig = sig;
@@ -1005,6 +1012,7 @@ function getActiveRibbonHighlight() {
 /**
  * Apply / clear visual highlight across priority corridor layers.
  * A segment highlights if the active category is among the trains that use it.
+ * Skips setStyle when weight/opacity are unchanged to avoid unnecessary Leaflet work.
  */
 function applyRibbonHighlight() {
     const active = getActiveRibbonHighlight();
@@ -1017,35 +1025,49 @@ function applyRibbonHighlight() {
     const mainDim = Math.max(1.5, mainBase * 0.45);
     const glowDim = Math.max(3, glowBase * 0.4);
 
-    for (let e = 0; e < _ribbonLayerEntries.length; e++) {
+    const n = _ribbonLayerEntries.length;
+    for (let e = 0; e < n; e++) {
         const entry = _ribbonLayerEntries[e];
+        // Prefer O(1) category membership (allCats is the authoritative set for the segment)
         const onSegment =
             !!active &&
             (entry.category === active ||
-                (entry.allCats && entry.allCats.includes(active)) ||
-                (entry.trains && entry.trains.some((t) => t.category === active)));
+                (entry._catSet
+                    ? entry._catSet.has(active)
+                    : (entry.allCats && entry.allCats.includes(active)) ||
+                      (entry.trains && entry.trains.some((t) => t.category === active))));
         const isDim = !!active && !onSegment;
 
+        const mw = onSegment ? mainHi : isDim ? mainDim : mainBase;
+        const mo = onSegment ? 1 : isDim ? 0.18 : 0.95;
+        const gw = onSegment ? glowHi : isDim ? glowDim : glowBase;
+        const go = onSegment ? 0.42 : isDim ? 0.04 : 0.22;
+
         try {
-            entry.main.setStyle({
-                weight: onSegment ? mainHi : isDim ? mainDim : mainBase,
-                opacity: onSegment ? 1 : isDim ? 0.18 : 0.95
-            });
-            entry.glow.setStyle({
-                weight: onSegment ? glowHi : isDim ? glowDim : glowBase,
-                opacity: onSegment ? 0.42 : isDim ? 0.04 : 0.22
-            });
+            // Skip identical style writes (Leaflet setStyle still invalidates path caches)
+            if (entry._hlMw !== mw || entry._hlMo !== mo) {
+                entry._hlMw = mw;
+                entry._hlMo = mo;
+                entry.main.setStyle({ weight: mw, opacity: mo });
+            }
+            if (entry._hlGw !== gw || entry._hlGo !== go) {
+                entry._hlGw = gw;
+                entry._hlGo = go;
+                entry.glow.setStyle({ weight: gw, opacity: go });
+            }
         } catch (_) {}
     }
 
-    // Sync legend chip states
+    // Sync legend chip states (only when legend is present)
     if (_ribbonLegendEl) {
-        _ribbonLegendEl.querySelectorAll(".rf-ribbon-legend-chip").forEach((chip) => {
+        const chips = _ribbonLegendEl.querySelectorAll(".rf-ribbon-legend-chip");
+        for (let i = 0; i < chips.length; i++) {
+            const chip = chips[i];
             const cat = chip.getAttribute("data-cat");
             chip.classList.toggle("is-active", !!active && cat === active);
             chip.classList.toggle("is-dim", !!active && cat !== active);
             chip.classList.toggle("is-focused", !!_ribbonFocusCat && cat === _ribbonFocusCat);
-        });
+        }
     }
 
     // Map cursor feedback
@@ -1079,8 +1101,28 @@ function clearRibbonInteraction() {
     applyRibbonHighlight();
 }
 
+/** Shared map-container rect cache (refreshed at most ~10×/s) for tooltip collision */
+let _mapRectCache = { at: 0, rect: null };
+
+function getPremiumMapRect() {
+    const now = performance.now();
+    if (_mapRectCache.rect && now - _mapRectCache.at < 100) return _mapRectCache.rect;
+    try {
+        const el = premiumMap?.getContainer?.();
+        if (!el) return null;
+        _mapRectCache.rect = el.getBoundingClientRect();
+        _mapRectCache.at = now;
+        return _mapRectCache.rect;
+    } catch (_) {
+        return null;
+    }
+}
+
 /**
  * Bind hover / click interaction on a ribbon's hit target (wider invisible line).
+ * Tooltip stays below the cursor (offset ~12px right, 20px down) and flips
+ * above only when there is insufficient space below the map container.
+ * Direction updates are throttled to keep dense-corridor hover smooth.
  */
 function bindRibbonInteraction(entry) {
     const target = entry.hit || entry.main;
@@ -1093,18 +1135,59 @@ function bindRibbonInteraction(entry) {
 
     target.bindTooltip(ribbonTooltipHtml(cat, allCats, trains), {
         sticky: true,
-        direction: "top",
+        direction: "bottom",
         opacity: 0.96,
         className: "rf-ribbon-tooltip",
-        offset: [0, -6]
+        offset: [12, 20]
     });
 
-    target.on("mouseover", () => {
-        setRibbonHover(cat);
+    // Viewport-aware direction: prefer below cursor; flip above when needed.
+    // Throttled so sliding along dense segments stays at 60 fps.
+    const applyTooltipDirection = (ev) => {
         try {
-            target.setStyle({ weight: (target.options.weight || 10) });
+            const tip = target.getTooltip && target.getTooltip();
+            if (!tip || !premiumMap) return;
+            const rect = getPremiumMapRect();
+            if (!rect) return;
+            const clientY = ev?.originalEvent?.clientY ?? 0;
+            const spaceBelow = rect.bottom - clientY;
+            const need = 240;
+            const dir = spaceBelow < need ? "top" : "bottom";
+            if (tip.options.direction !== dir) {
+                tip.options.direction = dir;
+                if (tip._container) {
+                    tip._container.classList.toggle("leaflet-tooltip-bottom", dir === "bottom");
+                    tip._container.classList.toggle("leaflet-tooltip-top", dir === "top");
+                }
+            }
+            // Horizontal clamp: keep tooltip inside map bounds
+            const tipW = (tip._container && tip._container.offsetWidth) || 220;
+            const clientX = ev?.originalEvent?.clientX ?? 0;
+            let dx = 12;
+            if (clientX + tipW + 16 > rect.right) {
+                dx = Math.min(12, rect.right - clientX - tipW - 8);
+            }
+            if (clientX + dx < rect.left + 8) {
+                dx = rect.left + 8 - clientX;
+            }
+            const dy = dir === "bottom" ? 20 : -20;
+            const prev = tip.options.offset;
+            if (!prev || prev[0] !== dx || prev[1] !== dy) {
+                tip.options.offset = [dx, dy];
+            }
+        } catch (_) {}
+    };
+
+    const throttledDirection = throttle(applyTooltipDirection, 32);
+
+    target.on("mouseover", (ev) => {
+        setRibbonHover(cat);
+        applyTooltipDirection(ev);
+        try {
+            target.setStyle({ weight: target.options.weight || 10 });
         } catch (_) {}
     });
+    target.on("mousemove", throttledDirection);
     target.on("mouseout", () => {
         setRibbonHover(null);
     });
@@ -1261,17 +1344,23 @@ function drawRibbonRun(run, runIndex) {
     hit.addTo(premiumGroup);
     ribbons.push(glow, main, hit);
 
+    const allCats = cats.slice();
     const entry = {
         runIndex,
         catIndex: 0,
         isMulti: cats.length > 1,
         isPrimary: true,
         category: primary,
-        allCats: cats.slice(),
+        allCats,
+        _catSet: new Set(allCats),
         trains,
         glow,
         main,
-        hit
+        hit,
+        _hlMw: null,
+        _hlMo: null,
+        _hlGw: null,
+        _hlGo: null
     };
     _ribbonLayerEntries.push(entry);
     bindRibbonInteraction(entry);

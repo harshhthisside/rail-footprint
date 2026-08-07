@@ -1582,3 +1582,15 @@ body.dark #sidebar {
     content-visibility: auto;
 }
 
+/* Map containers: isolate paint/layout from surrounding UI */
+#map, #premiumMap, #premiumPlannerMap,
+.map-wrapper, .premium-map-wrap {
+    contain: layout style;
+    isolation: isolate;
+}
+
+/* Sticky ribbon hit paths stay interactive without promoting every path */
+.rf-ribbon-hit {
+    pointer-events: stroke;
+}
+
